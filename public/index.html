@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="./jogg.js"></script>
+  <link rel="stylesheet" href="styles/style.css">
+  <title>burp world web controller</title>
+</head>
+
+<body>
+  <div id="container">
+    <!-- <button id="startButton">start</button> -->
+    <div class="UI">
+      <div id="UIbuttons">
+        <button id="recButton">rec</button>
+        <button id="playButton">play</button>
+        <button id="stopButton">stop</button>
+        <!-- <button id="trigButton">retrig</button> -->
+      </div>
+      <div id="UIsliders">
+        <!-- <label for="checkbox">
+          <input type="checkbox" name="pauseSwitch" id="pauseSwitch">
+          pause
+        </label> -->
+        <br>
+        <input type="range" name="jogwheel" id="jogwheel" min="0" max="1" step="0.01" value="0.5"
+          oninput="jogwheelMoved()" onchange="jogwheelMoved()">
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./script.js"></script>
+</body>
+
+</html>

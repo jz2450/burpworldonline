@@ -1,0 +1,107 @@
+html, body {
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  background-color: gray;
+}
+
+#container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.UI {
+    display: flex;
+}
+
+#UIbuttons {
+  display: flex;
+  flex-direction: column;
+  width: 6em; 
+}
+#UIsliders {
+  display: flex;
+  flex-direction: column;
+  width: 6em;
+  justify-content: center;
+  align-items: center;
+}
+
+#recButton {
+  background-color: red;
+  color: white;
+  height: 8em;
+}
+
+#playButton {
+  height: 16em;
+}
+
+#stopButton {
+  height: 8em;
+}
+
+button {
+  background-color: black;
+  color: white;
+  border-radius: 2em;
+}
+
+input[type=range]{
+    pointer-events: none;
+  }
+  input[type=range]::-webkit-slider-thumb{/*Webkit Browsers like Chrome and Safari*/
+    pointer-events: auto;
+  }
+  input[type=range]::-moz-range-thumb{/*Firefox*/
+    pointer-events: auto;
+  }
+  input[type=range]::-ms-thumb{/*Internet Explorer*/
+    pointer-events: auto;
+  }
+
+#jogwheel {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6em;
+  width: 200px;
+  margin-top: 100px;
+  background: transparent;
+  outline: none;
+  border-radius: 2em;
+  transform: rotate(90deg);
+}
+
+ #jogwheel::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6em;
+  width: 3em;
+  background: black;
+  border-radius: 2em;
+  cursor: pointer;
+}
+
+#jogwheel::-moz-range-thumb {
+  appearance: none;
+  height: 6em;
+  width: 3em;
+  background: black;
+  border-radius: 2em;
+  cursor: pointer;
+}
+
+#jogwheel::-webkit-slider-runnable-track {
+  height: 6em;
+  width: 200px;
+  background: #ddd;
+  border-radius: 2em; 
+}
+
+#jogwheel::-moz-range-track {
+  height: 6em;
+  width: 200px;
+  background: #ddd;
+  border-radius: 2em; 
+}
