@@ -1,9 +1,15 @@
+
+
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 export { audioContext };
 
 
 
-
+// PLAYBACK
+// three basic UI element source objects
+// "ambient" is for looping status elements
+// "content" is for user content
+// "reactive" is for UI elements and feedback
 
 // Ambient objects play on a loop
 class Ambient {
@@ -22,14 +28,61 @@ class Ambient {
 
 
 // Reactive objects play spontaneously as one shots
-class Reactive {
+export class Reactive {
 
-    constructor(sourceUrl) {
-
+    constructor() { // accepts a json with names as keys and urls as values
+        this.bufferList = {};
+        this.isPlaying = false;
+        this.wasInterrupted = false;
     }
 
-    trigger() {
 
+    async load(soundSheet) {
+        for (let [cue, url] of Object.entries(soundSheet)) {
+            // console.log(`Cue: ${cue}, url: ${url}`);
+            try {
+                let response = await fetch(url);
+                let arrayBuffer = await response.arrayBuffer();
+                let decodedData = await audioContext.decodeAudioData(arrayBuffer);
+                // console.log("buffer loaded");
+                this.bufferList[cue] = decodedData;
+            } catch (error) {
+                console.error('Error loading audio:', error);
+            }
+        }
+        console.log(this.bufferList);
+    }
+
+    trigger(soundName, callback) {
+        if (this.isPlaying) {
+            this.interrupt();
+        }
+        if (!this.source) {
+            this.source = audioContext.createBufferSource();
+            this.source.buffer = this.bufferList[soundName];
+            this.source.connect(audioContext.destination);
+            this.source.onended = () => {
+                // console.log("poop");
+                this.isPlaying = false;
+                this.source = null;
+                if (!this.wasInterrupted) {
+                    if (callback) {
+                        callback();
+                    }
+                }
+                this.wasInterrupted = false;
+
+            };
+            this.source.start(0);
+        }
+        this.isPlaying = true;
+    }
+
+    interrupt() {
+        this.isPlaying = false;
+        this.wasInterrupted = true;
+        this.source.stop();
+        this.source = null;
     }
 
 }
@@ -41,6 +94,7 @@ export class Content {
     constructor() {
         this.discreteBuffers = [];
         this.isPlaying = false;
+        this.wasPaused = false;
         this.startTime = 0;
         this.startOffset = 0;
         this.playbackRate = 1;
@@ -82,11 +136,15 @@ export class Content {
             this.source.onended = () => {
                 this.isPlaying = false;
                 this.source = null;
+                if (!this.wasPaused) {
+                    this.startOffset = 0;
+                }
             };
             this.source.start(0, this.startOffset % this.buffer.duration);
             this.scrubStartTime = audioContext.currentTime;
         }
         this.isPlaying = true;
+        this.wasPaused = false;
     }
 
     pause() {
@@ -94,6 +152,7 @@ export class Content {
         this.startOffset += (audioContext.currentTime - this.scrubStartTime) * this.playbackRate;
         this.source = null;
         this.isPlaying = false;
+        this.wasPaused = true;
     }
 
     scrub(jogwheelValue) { // expected values 0 - 0.5 - 1.0
@@ -107,10 +166,21 @@ export class Content {
         this.scrubStartTime = audioContext.currentTime;
 
     }
+
+    reset() {
+        this.discreteBuffers = [];
+        this.isPlaying = false;
+        this.startTime = 0;
+        this.startOffset = 0;
+        this.playbackRate = 1;
+        this.scrubStartTime = 0;
+        this.buffer = null;
+    }
 }
 
 
 // helper functions
+
 
 function mergeBuffers(buffers) {
     // Calculate total length of merged buffer
@@ -134,9 +204,9 @@ function mergeBuffers(buffers) {
 function getPlaybackRate(jogwheelVal) {
     let floatVal = parseFloat(jogwheelVal);
     if (floatVal < 0.5) {
-        return scale(floatVal, 0, 0.5, -2, -1);
+        return scale(floatVal, 0, 0.5, -4, -1);
     } else {
-        return scale(floatVal, 0.5, 1, 1, 2);
+        return scale(floatVal, 0.5, 1, 1, 4);
     }
 }
 

@@ -1,24 +1,20 @@
-// implement button sounds -> retrigger not working
-// make a buffer sheet for reactive sounds
 // implement ambient sounds
 // implement an end of queue sound
-// implement sound when jogwheel past threshold to skip
-// implement boot sound
-// implement loading sounds
+// implement loading sounds FIGURE OUT "LOADING"
 // clean up microphone sound, too artifacty
-// implement remote data store that isn't the fs
-// design recording flow?
 // sound for an empty feed??
 // how do you refresh?
 // redesign, more physical model
 // firebase authentication
 // audio file db per user
+// implement individual threads
+// implement sound when jogwheel past threshold to skip
 
 // RIGHT NOW vvv
-// fuckin slider is broken
+// get it online
 
 // JOGG.JS
-import { audioContext, Content } from "./jogg.js";
+import { audioContext, Content, Reactive } from "./jogg.js";
 
 // FIREBASE
 // Import the functions you need from the SDKs you need
@@ -46,15 +42,51 @@ let stopButton = document.getElementById('stopButton');
 let playButton = document.getElementById('playButton');
 let recordButton = document.getElementById('recButton');
 
-// const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+
+
+let ambientSheet = {
+    feed: "/cues/a-feedloopwhisper.mp3",
+    loading: "/cues/a-loadingburps.mp3",
+    uploading: "/cues/a-uploadingloop.mp3"
+}
+
+
+// REACTIVE FILE NAMES
+
+let reactiveSheet = {
+    error: "/cues/r-error.mp3",
+    feedEnd: "/cues/r-feedend.mp3",
+    feedStart: "/cues/r-feedstart.mp3",
+    pause: "/cues/r-pause.mp3",
+    play: "/cues/r-play.mp3",
+    prerecord: "cues/r-prerecord.mp3",
+    ready: "cues/r-ready.mp3",
+    splash: "cues/r-splash.mp3",
+    uploading: "/cues/a-uploadingloop.mp3"
+}
+// LOAD IN UI ELEMENTS
+let reactiveObject = new Reactive(reactiveSheet);
+reactiveObject.load(reactiveSheet).then(() => {
+    console.log(reactiveObject.bufferList);
+    reactiveObject.trigger("splash", () => {
+        // trigger loading loop
+        // console.log("callback from splash!");
+
+        reactiveObject.trigger("ready"); // this should actually be attached to the load function instead of the previous trigger function
+        // maybe with the loading loop
+    });
+})
+
+document.getElementById("startButton").addEventListener('click', () => {
+    audioContext.resume(); // for chrome
+    document.getElementById("splashscreen").style.display = "none";
+})
 
 // BUTTON EVENT LISTENERS
 // play button
 playButton.addEventListener('click', async () => {
-    audioContext.resume(); // for chrome
-    // if (contentSource.buffer) {
-    //     contentSource.start(0);
-    // }
+    // reactiveObject.trigger('play');
     if (contentObject && !contentObject.isPlaying) {
         contentObject.play();
     }
@@ -63,19 +95,30 @@ playButton.addEventListener('click', async () => {
 // record button
 ['mousedown', 'touchstart'].forEach(function (e) {
     recordButton.addEventListener(e, function () {
-        startRecording();
+        reactiveObject.trigger("prerecord", () => {
+            console.log("recording now");
+            startRecording();
+        })
     })
 });
 
 ['mouseup', 'touchend'].forEach(function (e) {
     recordButton.addEventListener(e, function () {
-        stopRecording();
+        // check if we're still in prerecord stage
+        if (isRecording) {
+            stopRecording();
+        } else if (reactiveObject.isPlaying) {
+            console.log("recording cancelled");
+            reactiveObject.interrupt();
+        }
+
     });
 });
 
+
+// stop button
 stopButton.addEventListener('click', () => {
-    // maybe a cute diy check if the source is playing
-    // contentSource.stop();
+    // reactiveObject.trigger('pause');
     if (contentObject.isPlaying) {
         contentObject.pause();
     }
@@ -88,7 +131,6 @@ jogwheel.addEventListener('change', jogwheelMoved);
 
 function jogwheelMoved() {
     // jogwheel value is 0 - 1.0
-    // scrubContentSource(jogwheel.value);
     if (contentObject.isPlaying) {
         contentObject.scrub(jogwheel.value);
     }
@@ -99,18 +141,20 @@ function jogwheelMoved() {
 // reset jogwheel when released
 ['mouseup', 'touchend'].forEach(function (e) {
     jogwheel.addEventListener(e, function () {
-        console.log("mouse up");
+        // console.log("mouse up");
         jogwheel.value = 0.5;
         if (contentObject.isPlaying) {
             contentObject.scrub(jogwheel.value);
         }
-
-        // scrubContentSource(jogwheel.value);
         // muteScrubClick();
     });
 });
 
-// MAIN
+
+
+
+
+// MAIN FLOW
 
 // RECORDING 
 let mediaRecorder;
@@ -126,20 +170,10 @@ navigator.mediaDevices.getUserMedia({ audio: true })
 
 
 
-// PLAYBACK
 
-// three basic UI element source objects
-// "ambient" is for looping status elements
-
-// "content" is for user content
-let contentSource = audioContext.createBufferSource();
-contentSource.connect(audioContext.destination);
-// "reactive" is for UI elements and feedback
 
 
 // Load AMBIENT
-
-
 
 // Load REACTIVE
 // we should use an array or object sheet of requested cue sources
@@ -147,14 +181,11 @@ let scrubClickBuffer;
 // let scrubClickSource = audioContext.createBufferSource();
 // loadReactiveAudio("/burpworldmockaudio/scrub-click.aif");
 
-
-
 // Load CONTENT
 
 // // Array to store MULTIPLE audio buffers
 // const contentBuffers = [];
 // let currentContentBuffer;
-// // todo: pointers to starts and ends of each buffer??
 
 // // Load each audio file from server into a buffer
 // getMocks()
@@ -173,6 +204,8 @@ const mockpaths = [
 
 
 const contentObject = new Content();
+loadFeed();
+
 // getUrlsFromPaths(mockpaths)
 //     .then((urls) => {
 //         contentObject.loadContentFromUrls(urls).then(() => {
@@ -186,42 +219,41 @@ const contentObject = new Content();
 //         console.error('error getting urls from firebase', error);
 //     })
 
-getPageOfAudioRefs()
-    .then((refArray) => {
-        getUrlsFromRefs(refArray)
-            .then((urls) => {
-                contentObject.loadContentFromUrls(urls).then(() => {
-                    console.log(contentObject);
-                }
-                ).catch(error => {
-                    console.error('Error loading audio:', error);
-                });
-            })
-            .catch(error => {
-                console.error('error getting urls from firebase', error);
-            })
-    })
-    .catch(error => {
-        console.error('error getting page of refs from firebase', error);
-    })
+
 
 
 
 
 // HELPER FUNCTIONS
 
+function loadFeed(callback) {
+    getPageOfAudioRefs()
+        .then((refArray) => { return getUrlsFromRefs(refArray) })
+        .then((urls) => {
+            contentObject.reset();
+            contentObject.loadContentFromUrls(urls);
+        })
+        .then(() => {
+            console.log(contentObject);
+            if (callback) callback();
+        })
+        .catch(error => {
+            console.error('Error loading audio:', error);
+        });
+}
+
+// function reloadFeed() {
+//     loadFeed(() => {
+//         reactiveObject.trigger('ready');
+//     })
+// }
+
 async function getPageOfAudioRefs() {
     // Create a reference under which you want to list
     const listRef = ref(storage, 'audio');
-
-    // Fetch the first page of 100.
     const firstPage = await list(listRef, { maxResults: 20 });
-
     console.log(firstPage.items);
     return firstPage.items;
-    // Use the result.
-    // processItems(firstPage.items)
-    // processPrefixes(firstPage.prefixes)
 
     // Fetch the second page if there are more elements.
     // if (firstPage.nextPageToken) {
@@ -344,21 +376,17 @@ async function getCdnURLFromRef(audioRef) {
 //     }
 // }
 
-
-
-// get real audio from server, last 24 hours
-async function getFeed() {
-    const response = await fetch("/feed");
-    const mockurls = response.json();
-    // console.log(mockurls);
-    return mockurls;
-}
+// // RECORDING HELPERS
 
 // Variables to store recording state and audio buffers
 let isRecording = false;
 let recordedChunks = [];
 
 function startRecording() {
+    if (contentObject.isPlaying) {
+        contentObject.pause();
+    }
+
     mediaRecorder = new MediaRecorder(micStream);
     mediaRecorder.ondataavailable = event => {
         recordedChunks.push(event.data);
@@ -377,6 +405,8 @@ function startRecording() {
 
         isRecording = false;
         recordedChunks = [];
+
+
     };
     // Start recording
     mediaRecorder.start();
@@ -387,6 +417,7 @@ function startRecording() {
 // Function to stop recording
 function stopRecording() {
     if (isRecording) {
+        reactiveObject.trigger('uploading');
         mediaRecorder.stop();
     }
 }
@@ -396,8 +427,16 @@ function uploadBlob(audioBlob) {
     const uploadref = ref(storage, '/audio/' + Date.now() + '.wav');
     uploadBytes(uploadref, audioBlob).then((snapshot) => {
         console.log('Uploaded a blob or file!');
+        // reload feed
+        console.log("reloading feed");
+        loadFeed(() => {
+            reactiveObject.interrupt();
+            reactiveObject.trigger('ready');
+        })
     });
 }
+
+// END OF RECORDING HELPERS
 
 
 function loadReactiveAudio(audioFile) { // make this work with another arg for loading ALL different UI sounds from array at once
@@ -440,48 +479,6 @@ function extendBufferWithSilence(originalBuffer, targetLength) {
     return newBuffer;
 }
 
-// function loadContentAudio(audioFileArray) {
-//     fetch(audioFileArray.shift())
-//         .then(response => response.arrayBuffer())
-//         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-//         .then(decodedData => {
-//             contentBuffers.push(decodedData);
-//             // Check if all audio files have been loaded
-//             if (audioFileArray.length == 0) {
-//                 console.log("all content cues loaded")
-//                 // Merge the audio buffers
-//                 const mergedContentBuffer = mergeBuffers(contentBuffers);
-//                 currentContentBuffer = mergedContentBuffer;
-//                 contentSource.buffer = currentContentBuffer;
-//             } else {
-//                 loadContentAudio(audioFileArray);
-//             }
-//         })
-//         .catch(error => {
-//             console.error('Error loading audio:', error);
-//         });
-// }
-
-// // Function to merge audio buffers
-// function mergeBuffers(buffers) {
-//     // Calculate total length of merged buffer
-//     const totalLength = buffers.reduce((acc, buffer) => acc + buffer.length, 0);
-
-//     // Create a new buffer to hold the merged audio
-//     const mergedBuffer = audioContext.createBuffer(1, totalLength, audioContext.sampleRate);
-//     const mergedData = mergedBuffer.getChannelData(0);
-//     let offset = 0;
-
-//     // Copy data from each buffer into the merged buffer
-//     buffers.forEach(buffer => {
-//         const data = buffer.getChannelData(0);
-//         mergedData.set(data, offset);
-//         offset += buffer.length;
-//     });
-
-//     return mergedBuffer;
-// }
-
 // like the p5 map() function
 function scale(number, inMin, inMax, outMin, outMax) {
     return (number - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
@@ -496,9 +493,6 @@ function getPlaybackRate(jogwheelVal) {
     }
 }
 
-// function scrubContentSource(jogwheelValue) {
-//     contentSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
-// }
 
 function playScrubClick(jogwheelValue) {
     // console.log('playing click');

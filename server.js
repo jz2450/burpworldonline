@@ -1,29 +1,14 @@
 import express from 'express';
-import bodyParser from "body-parser";
+// import bodyParser from "body-parser";
 import https from 'https';
 import fs from 'fs';
 // import archiver from 'archiver';
-// import { initializeApp } from "firebase/app";
-// import { getStorage, ref } from "firebase/storage";
-// // // TODO: Add SDKs for Firebase products that you want to use
-// // // https://firebase.google.com/docs/web/setup#available-libraries
-
-// const firebaseConfig = {
-//   apiKey: "AIzaSyAsjqIoD03-oGah19E0ng2L9PzqTrUMPko",
-//   authDomain: "burp-world-online.firebaseapp.com",
-//   projectId: "burp-world-online",
-//   storageBucket: "burp-world-online.appspot.com",
-//   messagingSenderId: "174854073314",
-//   appId: "1:174854073314:web:84050fb07c1208e25627bb"
-// };
-// const firebase = initializeApp(firebaseConfig);
-// const storage = getStorage();
 
 const app = express();
 
 // Your Express app configuration and routes go here
 app.use(express.static("public"));
-app.use(bodyParser.raw({ limit: '10mb' }));
+// app.use(bodyParser.raw({ limit: '10mb' }));
 
 // If the user just goes to the "route" / then run this function
 // app.get("/", function (req, res) {
@@ -45,9 +30,9 @@ const credentials = {
 const httpsServer = https.createServer(credentials, app);
 
 // get feed
-app.get('/feed', (req, res) => {
+// app.get('/feed', (req, res) => {
 
-});
+// });
 
 // // get folder of audio files from 24 hours ago
 // app.get('/feed', (req, res) => {
@@ -107,14 +92,14 @@ httpsServer.listen(443, () => {
   console.log('HTTPS server running on port 443');
 });
 
-// mock audio urls, in order
-const mockAudioUrlArray = [
-  "/burpworldmockaudio/burp7.aif",
-  "/burpworldmockaudio/response1.aif",
-  "/burpworldmockaudio/response2.aif",
-  "/burpworldmockaudio/response3.aif",
-  "/burpworldmockaudio/response4.aif",
-  "/burpworldmockaudio/response5.aif",
-  "/burpworldmockaudio/response6.aif"
-]
+// // mock audio urls, in order
+// const mockAudioUrlArray = [
+//   "/burpworldmockaudio/burp7.aif",
+//   "/burpworldmockaudio/response1.aif",
+//   "/burpworldmockaudio/response2.aif",
+//   "/burpworldmockaudio/response3.aif",
+//   "/burpworldmockaudio/response4.aif",
+//   "/burpworldmockaudio/response5.aif",
+//   "/burpworldmockaudio/response6.aif"
+// ]
 
