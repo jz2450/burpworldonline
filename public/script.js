@@ -11,7 +11,7 @@
 // implement sound when jogwheel past threshold to skip
 
 // RIGHT NOW vvv
-// get it online
+// add labels to the slider! might be part of visual redesign
 
 // JOGG.JS
 import { audioContext, Content, Reactive } from "./jogg.js";
