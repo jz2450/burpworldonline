@@ -4,24 +4,26 @@
 // implement an end of queue sound
 // implement sound when jogwheel past threshold to skip
 // implement boot sound
-// implement loading sound
+// implement loading sounds
 // clean up microphone sound, too artifacty
 // implement remote data store that isn't the fs
 // design recording flow?
 // sound for an empty feed??
 // how do you refresh?
 // redesign, more physical model
+// firebase authentication
+// audio file db per user
 
 // RIGHT NOW vvv
-// firebase authentication
-// audio file db
-// export to jogg.js
-// calling start more than once
+// fuckin slider is broken
+
+// JOGG.JS
+import { audioContext, Content } from "./jogg.js";
 
 // FIREBASE
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, list } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -49,9 +51,12 @@ let recordButton = document.getElementById('recButton');
 // BUTTON EVENT LISTENERS
 // play button
 playButton.addEventListener('click', async () => {
-    audioContext.resume();
-    if (contentSource.buffer) {
-        contentSource.start(0);
+    audioContext.resume(); // for chrome
+    // if (contentSource.buffer) {
+    //     contentSource.start(0);
+    // }
+    if (contentObject && !contentObject.isPlaying) {
+        contentObject.play();
     }
 });
 
@@ -70,23 +75,38 @@ playButton.addEventListener('click', async () => {
 
 stopButton.addEventListener('click', () => {
     // maybe a cute diy check if the source is playing
-    contentSource.stop();
+    // contentSource.stop();
+    if (contentObject.isPlaying) {
+        contentObject.pause();
+    }
 })
 
 // jogwheel
+
+jogwheel.addEventListener('input', jogwheelMoved);
+jogwheel.addEventListener('change', jogwheelMoved);
+
 function jogwheelMoved() {
     // jogwheel value is 0 - 1.0
-    scrubContentSource(jogwheel.value);
-    playScrubClick(jogwheel.value);
+    // scrubContentSource(jogwheel.value);
+    if (contentObject.isPlaying) {
+        contentObject.scrub(jogwheel.value);
+    }
+    // playScrubClick(jogwheel.value);
 }
+
 
 // reset jogwheel when released
 ['mouseup', 'touchend'].forEach(function (e) {
     jogwheel.addEventListener(e, function () {
-        // console.log("mouse up");
+        console.log("mouse up");
         jogwheel.value = 0.5;
-        scrubContentSource(jogwheel.value);
-        muteScrubClick();
+        if (contentObject.isPlaying) {
+            contentObject.scrub(jogwheel.value);
+        }
+
+        // scrubContentSource(jogwheel.value);
+        // muteScrubClick();
     });
 });
 
@@ -110,14 +130,12 @@ navigator.mediaDevices.getUserMedia({ audio: true })
 
 // three basic UI element source objects
 // "ambient" is for looping status elements
-let ambientSource = audioContext.createBufferSource();
-ambientSource.connect(audioContext.destination);
+
 // "content" is for user content
 let contentSource = audioContext.createBufferSource();
 contentSource.connect(audioContext.destination);
 // "reactive" is for UI elements and feedback
-let reactiveSource = audioContext.createBufferSource();
-reactiveSource.connect(audioContext.destination);
+
 
 // Load AMBIENT
 
@@ -126,53 +144,125 @@ reactiveSource.connect(audioContext.destination);
 // Load REACTIVE
 // we should use an array or object sheet of requested cue sources
 let scrubClickBuffer;
-let scrubClickSource = audioContext.createBufferSource();
-loadReactiveAudio("/burpworldmockaudio/scrub-click.aif");
+// let scrubClickSource = audioContext.createBufferSource();
+// loadReactiveAudio("/burpworldmockaudio/scrub-click.aif");
 
 
 
 // Load CONTENT
 
-// Array to store MULTIPLE audio buffers
-const contentBuffers = [];
-let currentContentBuffer;
-// todo: pointers to starts and ends of each buffer??
+// // Array to store MULTIPLE audio buffers
+// const contentBuffers = [];
+// let currentContentBuffer;
+// // todo: pointers to starts and ends of each buffer??
 
-// Load each audio file from server into a buffer
-getMocks()
-    .then((result) => {
-        console.log(result);
-        loadContentAudio(result);
-    });
+// // Load each audio file from server into a buffer
+// getMocks()
+//     .then((result) => {
+//         console.log(result);
+//         loadContentAudio(result);
+//     });
+
+
+const mockpaths = [
+    "mockaudio/burp5.aif",
+    "mockaudio/response6.aif",
+    "mockaudio/response3.aif",
+    "mockaudio/response5.aif"
+];
+
+
+const contentObject = new Content();
+// getUrlsFromPaths(mockpaths)
+//     .then((urls) => {
+//         contentObject.loadContentFromUrls(urls).then(() => {
+//             console.log(contentObject);
+//         }
+//         ).catch(error => {
+//             console.error('Error loading audio:', error);
+//         });
+//     })
+//     .catch(error => {
+//         console.error('error getting urls from firebase', error);
+//     })
+
+getPageOfAudioRefs()
+    .then((refArray) => {
+        getUrlsFromRefs(refArray)
+            .then((urls) => {
+                contentObject.loadContentFromUrls(urls).then(() => {
+                    console.log(contentObject);
+                }
+                ).catch(error => {
+                    console.error('Error loading audio:', error);
+                });
+            })
+            .catch(error => {
+                console.error('error getting urls from firebase', error);
+            })
+    })
+    .catch(error => {
+        console.error('error getting page of refs from firebase', error);
+    })
+
+
 
 
 // HELPER FUNCTIONS
 
+async function getPageOfAudioRefs() {
+    // Create a reference under which you want to list
+    const listRef = ref(storage, 'audio');
 
+    // Fetch the first page of 100.
+    const firstPage = await list(listRef, { maxResults: 20 });
 
+    console.log(firstPage.items);
+    return firstPage.items;
+    // Use the result.
+    // processItems(firstPage.items)
+    // processPrefixes(firstPage.prefixes)
 
-// get mock urls from server
-async function getMocks() {
-    let mockurls = [];
-    const mockpaths = [
-        "mockaudio/burp5.aif",
-        "mockaudio/response6.aif",
-        "mockaudio/response3.aif",
-        "mockaudio/response5.aif"
-    ];
-    mockpaths.forEach((path) => {
-        mockurls.push(getContentURLs(path));
+    // Fetch the second page if there are more elements.
+    // if (firstPage.nextPageToken) {
+    //   const secondPage = await list(listRef, {
+    //     maxResults: 100,
+    //     pageToken: firstPage.nextPageToken,
+    //   });
+    //   // processItems(secondPage.items)
+    //   // processPrefixes(secondPage.prefixes)
+    // }
+}
+
+async function getUrlsFromPaths(sourcePathArray) {
+    let urls = [];
+    sourcePathArray.forEach((path) => {
+        urls.push(getCdnURL(path));
     });
     try {
-        const results = await Promise.all(mockurls);
-        console.log("All items processed successfully");
+        const results = await Promise.all(urls);
+        console.log("All urls gotten successfully");
         return results;
     } catch (error) {
         console.error("Error processing items:", error);
     }
 }
 
-async function getContentURLs(path) {
+async function getUrlsFromRefs(refArray) {
+    let urls = [];
+    refArray.forEach((r) => {
+        urls.push(getCdnURLFromRef(r));
+    });
+    try {
+        const results = await Promise.all(urls);
+        console.log("All urls gotten successfully");
+        return results;
+    } catch (error) {
+        console.error("Error processing items:", error);
+    }
+}
+
+async function getCdnURL(path) {
     return new Promise(resolve => {
         getDownloadURL(ref(storage, path))
             .then((url) => {
@@ -201,6 +291,60 @@ async function getContentURLs(path) {
             });
     })
 }
+
+async function getCdnURLFromRef(audioRef) {
+    return new Promise(resolve => {
+        getDownloadURL(audioRef)
+            .then((url) => {
+                resolve(url);
+            })
+            .catch((error) => {
+                // A full list of error codes is available at
+                // https://firebase.google.com/docs/storage/web/handle-errors
+                switch (error.code) {
+                    case 'storage/object-not-found':
+                        // File doesn't exist
+                        break;
+                    case 'storage/unauthorized':
+                        // User doesn't have permission to access the object
+                        break;
+                    case 'storage/canceled':
+                        // User canceled the upload
+                        break;
+
+                    // ...
+
+                    case 'storage/unknown':
+                        // Unknown error occurred, inspect the server response
+                        break;
+                }
+            });
+    })
+}
+
+
+// // get mock urls from server
+// async function getMocks() {
+//     let mockurls = [];
+//     const mockpaths = [
+//         "mockaudio/burp5.aif",
+//         "mockaudio/response6.aif",
+//         "mockaudio/response3.aif",
+//         "mockaudio/response5.aif"
+//     ];
+//     mockpaths.forEach((path) => {
+//         mockurls.push(getCdnURL(path));
+//     });
+//     try {
+//         const results = await Promise.all(mockurls);
+//         console.log("All items processed successfully");
+//         return results;
+//     } catch (error) {
+//         console.error("Error processing items:", error);
+//     }
+// }
+
+
 
 // get real audio from server, last 24 hours
 async function getFeed() {
@@ -296,47 +440,47 @@ function extendBufferWithSilence(originalBuffer, targetLength) {
     return newBuffer;
 }
 
-function loadContentAudio(audioFileArray) {
-    fetch(audioFileArray.shift())
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-        .then(decodedData => {
-            contentBuffers.push(decodedData);
-            // Check if all audio files have been loaded
-            if (audioFileArray.length == 0) {
-                console.log("all content cues loaded")
-                // Merge the audio buffers
-                const mergedContentBuffer = mergeBuffers(contentBuffers);
-                currentContentBuffer = mergedContentBuffer;
-                contentSource.buffer = currentContentBuffer;
-            } else {
-                loadContentAudio(audioFileArray);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading audio:', error);
-        });
-}
+// function loadContentAudio(audioFileArray) {
+//     fetch(audioFileArray.shift())
+//         .then(response => response.arrayBuffer())
+//         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+//         .then(decodedData => {
+//             contentBuffers.push(decodedData);
+//             // Check if all audio files have been loaded
+//             if (audioFileArray.length == 0) {
+//                 console.log("all content cues loaded")
+//                 // Merge the audio buffers
+//                 const mergedContentBuffer = mergeBuffers(contentBuffers);
+//                 currentContentBuffer = mergedContentBuffer;
+//                 contentSource.buffer = currentContentBuffer;
+//             } else {
+//                 loadContentAudio(audioFileArray);
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error loading audio:', error);
+//         });
+// }
 
-// Function to merge audio buffers
-function mergeBuffers(buffers) {
-    // Calculate total length of merged buffer
-    const totalLength = buffers.reduce((acc, buffer) => acc + buffer.length, 0);
+// // Function to merge audio buffers
+// function mergeBuffers(buffers) {
+//     // Calculate total length of merged buffer
+//     const totalLength = buffers.reduce((acc, buffer) => acc + buffer.length, 0);
 
-    // Create a new buffer to hold the merged audio
-    const mergedBuffer = audioContext.createBuffer(1, totalLength, audioContext.sampleRate);
-    const mergedData = mergedBuffer.getChannelData(0);
-    let offset = 0;
+//     // Create a new buffer to hold the merged audio
+//     const mergedBuffer = audioContext.createBuffer(1, totalLength, audioContext.sampleRate);
+//     const mergedData = mergedBuffer.getChannelData(0);
+//     let offset = 0;
 
-    // Copy data from each buffer into the merged buffer
-    buffers.forEach(buffer => {
-        const data = buffer.getChannelData(0);
-        mergedData.set(data, offset);
-        offset += buffer.length;
-    });
+//     // Copy data from each buffer into the merged buffer
+//     buffers.forEach(buffer => {
+//         const data = buffer.getChannelData(0);
+//         mergedData.set(data, offset);
+//         offset += buffer.length;
+//     });
 
-    return mergedBuffer;
-}
+//     return mergedBuffer;
+// }
 
 // like the p5 map() function
 function scale(number, inMin, inMax, outMin, outMax) {
@@ -352,9 +496,9 @@ function getPlaybackRate(jogwheelVal) {
     }
 }
 
-function scrubContentSource(jogwheelValue) {
-    contentSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
-}
+// function scrubContentSource(jogwheelValue) {
+//     contentSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
+// }
 
 function playScrubClick(jogwheelValue) {
     // console.log('playing click');

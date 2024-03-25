@@ -1,4 +1,7 @@
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+export { audioContext };
+
+
 
 
 
@@ -33,43 +36,33 @@ class Reactive {
 
 
 // Content objects play from a maipulatable timeline
-class Content {
+export class Content {
 
-    constructor(sourcePathArray) { // accepts an array of child paths e.g. ["audio/burp5.aif", ...]
-        this.sourcePathArray = sourcePathArray;
-        this.urlArray = this.loadContentURLs(this.sourcePathArray);
-        this.buffer = this.loadContentAudio(this.urlArray);
+    constructor() {
+        this.discreteBuffers = [];
+        this.isPlaying = false;
+        this.startTime = 0;
+        this.startOffset = 0;
+        this.playbackRate = 1;
+        this.scrubStartTime = 0;
     }
 
-    async loadContentURLs(sourcePathArray) {
-        let urls = [];
-        sourcePathArray.forEach((path) => {
-            urls.push(getCdnURL(path));
-        });
-        try {
-            const results = await Promise.all(urls);
-            console.log("All items processed successfully");
-            return results;
-        } catch (error) {
-            console.error("Error processing items:", error);
-        }
-    }
-
-    loadContentAudio(audioFileArray) {
-        fetch(audioFileArray.shift())
+    async loadContentFromUrls(audioUrlArray) { // accepts an array of child paths e.g. ["audio/burp5.aif", ...]
+        // console.log(audioUrlArray);
+        return fetch(audioUrlArray.shift())
             .then(response => response.arrayBuffer())
             .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
             .then(decodedData => {
-                contentBuffers.push(decodedData);
+                this.discreteBuffers.push(decodedData);
                 // Check if all audio files have been loaded
-                if (audioFileArray.length == 0) {
+                if (audioUrlArray.length == 0) {
                     console.log("all content cues loaded")
                     // Merge the audio buffers
-                    const mergedContentBuffer = mergeBuffers(contentBuffers);
-                    return mergedContentBuffer;
+                    const mergedContentBuffer = mergeBuffers(this.discreteBuffers);
+                    this.buffer = mergedContentBuffer;
                     // contentSource.buffer = currentContentBuffer; // make the source when play is clicked
                 } else {
-                    loadContentAudio(audioFileArray);
+                    this.loadContentFromUrls(audioUrlArray);
                 }
             })
             .catch(error => {
@@ -77,54 +70,48 @@ class Content {
             });
     }
 
-    get state() {
-        return true;
+    get state() { // true if is playing
+        return this.isPlaying;
     }
 
     play() {
-
+        if (!this.source) {
+            this.source = audioContext.createBufferSource();
+            this.source.buffer = this.buffer;
+            this.source.connect(audioContext.destination);
+            this.source.onended = () => {
+                this.isPlaying = false;
+                this.source = null;
+            };
+            this.source.start(0, this.startOffset % this.buffer.duration);
+            this.scrubStartTime = audioContext.currentTime;
+        }
+        this.isPlaying = true;
     }
 
     pause() {
-
+        this.source.stop();
+        this.startOffset += (audioContext.currentTime - this.scrubStartTime) * this.playbackRate;
+        this.source = null;
+        this.isPlaying = false;
     }
 
-    stop() {
+    scrub(jogwheelValue) { // expected values 0 - 0.5 - 1.0
+        this.startOffset += (audioContext.currentTime - this.scrubStartTime) * this.playbackRate;
 
-    }
 
-    scrub() {
+        this.playbackRate = getPlaybackRate(jogwheelValue);
+        this.source.playbackRate.setValueAtTime(this.playbackRate, audioContext.currentTime);
+        // update playhead position somehow?
+
+        this.scrubStartTime = audioContext.currentTime;
 
     }
 }
 
-async function getCdnURL(path) {
-    return new Promise(resolve => {
-        getDownloadURL(ref(storage, path))
-            .then((url) => {
-                resolve(url);
-            })
-            .catch((error) => {
-                // https://firebase.google.com/docs/storage/web/handle-errors
-                switch (error.code) {
-                    case 'storage/object-not-found':
-                        // File doesn't exist
-                        break;
-                    case 'storage/unauthorized':
-                        // User doesn't have permission to access the object
-                        break;
-                    case 'storage/canceled':
-                        // User canceled the upload
-                        break;
-                    case 'storage/unknown':
-                        // Unknown error occurred, inspect the server response
-                        break;
-                }
-            });
-    })
-}
 
-// Function to merge audio buffers
+// helper functions
+
 function mergeBuffers(buffers) {
     // Calculate total length of merged buffer
     const totalLength = buffers.reduce((acc, buffer) => acc + buffer.length, 0);
@@ -142,4 +129,17 @@ function mergeBuffers(buffers) {
     });
 
     return mergedBuffer;
+}
+
+function getPlaybackRate(jogwheelVal) {
+    let floatVal = parseFloat(jogwheelVal);
+    if (floatVal < 0.5) {
+        return scale(floatVal, 0, 0.5, -2, -1);
+    } else {
+        return scale(floatVal, 0.5, 1, 1, 2);
+    }
+}
+
+function scale(number, inMin, inMax, outMin, outMax) {
+    return (number - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }

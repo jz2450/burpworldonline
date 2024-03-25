@@ -2,22 +2,22 @@ import express from 'express';
 import bodyParser from "body-parser";
 import https from 'https';
 import fs from 'fs';
-import archiver from 'archiver';
-import { initializeApp } from "firebase/app";
-import { getStorage, ref } from "firebase/storage";
-// // TODO: Add SDKs for Firebase products that you want to use
-// // https://firebase.google.com/docs/web/setup#available-libraries
+// import archiver from 'archiver';
+// import { initializeApp } from "firebase/app";
+// import { getStorage, ref } from "firebase/storage";
+// // // TODO: Add SDKs for Firebase products that you want to use
+// // // https://firebase.google.com/docs/web/setup#available-libraries
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAsjqIoD03-oGah19E0ng2L9PzqTrUMPko",
-  authDomain: "burp-world-online.firebaseapp.com",
-  projectId: "burp-world-online",
-  storageBucket: "burp-world-online.appspot.com",
-  messagingSenderId: "174854073314",
-  appId: "1:174854073314:web:84050fb07c1208e25627bb"
-};
-const firebase = initializeApp(firebaseConfig);
-const storage = getStorage();
+// const firebaseConfig = {
+//   apiKey: "AIzaSyAsjqIoD03-oGah19E0ng2L9PzqTrUMPko",
+//   authDomain: "burp-world-online.firebaseapp.com",
+//   projectId: "burp-world-online",
+//   storageBucket: "burp-world-online.appspot.com",
+//   messagingSenderId: "174854073314",
+//   appId: "1:174854073314:web:84050fb07c1208e25627bb"
+// };
+// const firebase = initializeApp(firebaseConfig);
+// const storage = getStorage();
 
 const app = express();
 
@@ -44,63 +44,63 @@ const credentials = {
 // Create an HTTPS server with the Express app
 const httpsServer = https.createServer(credentials, app);
 
-// provide client with mock audio urls
-app.get('/mocks', (req, res) => {
-  res.send(mockAudioUrlArray);
-});
-
-// get folder of audio files from 24 hours ago
+// get feed
 app.get('/feed', (req, res) => {
-  const folderPath = './audio';
-  // Read the files in the folder
-  fs.readdir(folderPath, (err, files) => {
-    if (err) {
-      return res.status(500).send('Error reading folder');
-    }
-    // Filter files based on your condition
-    let timeThreshold = Date.now() - 86400000; // 24 hours previous
-    const filteredFiles = files.filter(file => {
-      const fileNameWithoutExtension = file.split('.')[0];
-      const fileNumber = parseInt(fileNameWithoutExtension);
-      return !isNaN(fileNumber) && fileNumber > timeThreshold;
-    });
-    const zipStream = fs.createWriteStream('filtered_files.zip');
-    const archive = archiver('zip', {
-      zlib: { level: 9 } // Set compression level
-    });
-    archive.pipe(zipStream);
 
-    // Append filtered files to the archive
-    filteredFiles.forEach(file => {
-      const filePath = `${folderPath}/${file}`;
-      archive.append(fs.createReadStream(filePath), { name: file });
-    });
-
-    // Finalize the archive
-    archive.finalize();
-
-    // Set headers for the response
-    res.set('Content-Type', 'application/zip');
-    res.set('Content-Disposition', 'attachment; filename=filtered_files.zip');
-
-    // Pipe the zip stream to the response
-    zipStream.pipe(res);
-  });
 });
 
-const rawParser = bodyParser.raw();
-// receive audio blobs to save
-app.post('/upload', rawParser, (req, res) => {
-  console.log("body: ", req.body);
-  if (!req.body) { // || !req.body.audioBlob
-    return res.status(400).json({ error: 'Audio data is missing' });
-  }
-  fs.writeFile('./audio/' + Date.now() + '.wav', req.body, function (err) {
-    if (err) console.log(err);
-    else console.log("It's saved!");
-  });
-  res.status(200).json({ message: 'Audio file uploaded successfully' });
-});
+// // get folder of audio files from 24 hours ago
+// app.get('/feed', (req, res) => {
+//   const folderPath = './audio';
+//   // Read the files in the folder
+//   fs.readdir(folderPath, (err, files) => {
+//     if (err) {
+//       return res.status(500).send('Error reading folder');
+//     }
+//     // Filter files based on your condition
+//     let timeThreshold = Date.now() - 86400000; // 24 hours previous
+//     const filteredFiles = files.filter(file => {
+//       const fileNameWithoutExtension = file.split('.')[0];
+//       const fileNumber = parseInt(fileNameWithoutExtension);
+//       return !isNaN(fileNumber) && fileNumber > timeThreshold;
+//     });
+//     const zipStream = fs.createWriteStream('filtered_files.zip');
+//     const archive = archiver('zip', {
+//       zlib: { level: 9 } // Set compression level
+//     });
+//     archive.pipe(zipStream);
+
+//     // Append filtered files to the archive
+//     filteredFiles.forEach(file => {
+//       const filePath = `${folderPath}/${file}`;
+//       archive.append(fs.createReadStream(filePath), { name: file });
+//     });
+
+//     // Finalize the archive
+//     archive.finalize();
+
+//     // Set headers for the response
+//     res.set('Content-Type', 'application/zip');
+//     res.set('Content-Disposition', 'attachment; filename=filtered_files.zip');
+
+//     // Pipe the zip stream to the response
+//     zipStream.pipe(res);
+//   });
+// });
+
+// const rawParser = bodyParser.raw();
+// // receive audio blobs to save
+// app.post('/upload', rawParser, (req, res) => {
+//   console.log("body: ", req.body);
+//   if (!req.body) { // || !req.body.audioBlob
+//     return res.status(400).json({ error: 'Audio data is missing' });
+//   }
+//   fs.writeFile('./audio/' + Date.now() + '.wav', req.body, function (err) {
+//     if (err) console.log(err);
+//     else console.log("It's saved!");
+//   });
+//   res.status(200).json({ message: 'Audio file uploaded successfully' });
+// });
 
 // Start the server
 httpsServer.listen(443, () => {
