@@ -1,6 +1,7 @@
 import express from 'express';
 // import bodyParser from "body-parser";
 import https from 'https';
+import http from 'http';
 import fs from 'fs';
 // import archiver from 'archiver';
 
@@ -26,8 +27,20 @@ const credentials = {
   ca: ca
 };
 
+const httpApp = express();
+
+httpApp.get("*", function(req, res, next) {
+    res.redirect("https://" + req.headers.host + req.path);
+});
+
+http.createServer(httpApp).listen(80, function() {
+    console.log("HTTP server listening on port 80");
+});
+
 // Create an HTTPS server with the Express app
 const httpsServer = https.createServer(credentials, app);
+
+
 
 // get feed
 // app.get('/feed', (req, res) => {
