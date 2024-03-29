@@ -1,19 +1,21 @@
-// redesign, more physical model
+
+// record new sounds
+// implement sound when jogwheel past threshold to skip// redesign, more physical model
 // implement an end of queue sound
 // implement loading sounds FIGURE OUT "LOADING"
 // sound for an empty feed?? paused??
+// TUTORIAL FLOW
 // how do you refresh?
-// implement individual threads
 // notification when new burp uploaded
 // audio mic input problems
 // throw error if audio in is not decodable
 // clean up microphone sound, too artifacty
-
+// synthesis, not audio files
 
 // RIGHT NOW vvv
-// implement sound when jogwheel past threshold to skip
 // firebase authentication
 // audio file db per user
+// implement individual threads
 
 // JOGG.JS
 import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
@@ -22,6 +24,8 @@ import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -38,7 +42,23 @@ const firebaseConfig = {
 // Initialize Firebase
 const firebase = initializeApp(firebaseConfig);
 const storage = getStorage();
+const auth = getAuth();
+// auth
+auth.languageCode = 'en';
+let signInAllow = false;
+const recaptchaVerifier = new RecaptchaVerifier(auth, 'startButton', {
+    'size': 'invisible',
+    'callback': (response) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+        onSignInSubmit();// change to my own function
+        // console.log(response);
+        // signInAllow = true;
+    }
+});
+// const appVerifier = window.recaptchaVerifier;
 
+
+// button interface setup
 let jogwheel = document.getElementById('jogwheel');
 let stopButton = document.getElementById('stopButton');
 let playButton = document.getElementById('playButton');
@@ -85,12 +105,42 @@ reactiveObject.load(reactiveSheet).then(() => {
     });
 })
 
-document.getElementById("startButton").addEventListener('click', () => {
-    audioContext.resume(); // for chrome
-    document.getElementById("splashscreen").style.display = "none";
-})
+
+
+
 
 // BUTTON EVENT LISTENERS
+// start button
+document.getElementById("startButton").addEventListener('click', () => {
+
+    const phoneNumber = document.getElementById("phonenumber").value; // replace function
+    let appVerifier = window.recaptchaVerifier
+    console.log("phone number: " + phoneNumber);
+    signInWithPhoneNumber(auth, phoneNumber, appVerifier)
+        .then((confirmationResult) => {
+            // SMS sent. Prompt user to type the code from the message, then sign the
+            // user in with confirmationResult.confirm(code).
+            console.log(confirmationResult);
+            window.confirmationResult = confirmationResult;
+            // ...
+        }).catch((error) => {
+
+            console.log("SMS not sent: "+error);
+            // Error; SMS not sent
+            // ...
+            // grecaptcha.reset(window.recaptchaWidgetId);
+
+            // // Or, if you haven't stored the widget ID:
+            // window.recaptchaVerifier.render().then(function (widgetId) {
+            //     grecaptcha.reset(widgetId);
+            // });
+        });
+
+    // audioContext.resume(); // for chrome
+    // document.getElementById("splashscreen").style.display = "none";
+})
+
+
 // play button
 playButton.addEventListener('click', async () => {
     // reactiveObject.trigger('play');
@@ -184,7 +234,7 @@ navigator.mediaDevices.getUserMedia({ audio: true })
 
 // Load REACTIVE
 // we should use an array or object sheet of requested cue sources
-let scrubClickBuffer;
+// let scrubClickBuffer;
 // let scrubClickSource = audioContext.createBufferSource();
 // loadReactiveAudio("/burpworldmockaudio/scrub-click.aif");
 
@@ -262,12 +312,6 @@ function loadFeed(callback) {
     //         console.error('Error loading audio:', error);
     //     });
 }
-
-// function reloadFeed() {
-//     loadFeed(() => {
-//         reactiveObject.trigger('ready');
-//     })
-// }
 
 async function getPageOfAudioRefs() {
     // Create a reference under which you want to list
@@ -475,74 +519,74 @@ function uploadBlob(audioBlob) {
 // END OF RECORDING HELPERS
 
 
-function loadReactiveAudio(audioFile) { // make this work with another arg for loading ALL different UI sounds from array at once
-    fetch(audioFile)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-        .then(decodedData => {
-            scrubClickBuffer = extendBufferWithSilence(decodedData, 0.25);
-            scrubClickSource.buffer = scrubClickBuffer;
-            scrubClickSource.loop = true;
-            scrubClickSource.start();
-            console.log("all reactive cues loaded")
-        })
-        .catch(error => {
-            console.error('Error loading audio:', error);
-        });
-}
+// function loadReactiveAudio(audioFile) { // make this work with another arg for loading ALL different UI sounds from array at once
+//     fetch(audioFile)
+//         .then(response => response.arrayBuffer())
+//         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+//         .then(decodedData => {
+//             scrubClickBuffer = extendBufferWithSilence(decodedData, 0.25);
+//             scrubClickSource.buffer = scrubClickBuffer;
+//             scrubClickSource.loop = true;
+//             scrubClickSource.start();
+//             console.log("all reactive cues loaded")
+//         })
+//         .catch(error => {
+//             console.error('Error loading audio:', error);
+//         });
+// }
 
-// Function to extend the length of an AudioBuffer with silence
-function extendBufferWithSilence(originalBuffer, targetLength) {
-    // Calculate the current duration of the buffer
-    const currentDuration = originalBuffer.duration;
-    // Calculate the number of additional seconds needed
-    const additionalSeconds = targetLength - currentDuration;
-    // Calculate the number of additional samples needed
-    const additionalSamples = Math.ceil(originalBuffer.sampleRate * additionalSeconds);
-    // Create a new buffer with the desired length
-    const newBuffer = audioContext.createBuffer(originalBuffer.numberOfChannels, originalBuffer.length + additionalSamples, originalBuffer.sampleRate);
-    // Iterate over each channel
-    for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
-        const originalData = originalBuffer.getChannelData(channel);
-        const newData = newBuffer.getChannelData(channel);
-        // Copy the original data
-        newData.set(originalData);
-        // Fill the remaining portion with silence
-        for (let i = originalBuffer.length; i < newBuffer.length; i++) {
-            newData[i] = 0; // Silence
-        }
-    }
-    return newBuffer;
-}
+// // Function to extend the length of an AudioBuffer with silence
+// function extendBufferWithSilence(originalBuffer, targetLength) {
+//     // Calculate the current duration of the buffer
+//     const currentDuration = originalBuffer.duration;
+//     // Calculate the number of additional seconds needed
+//     const additionalSeconds = targetLength - currentDuration;
+//     // Calculate the number of additional samples needed
+//     const additionalSamples = Math.ceil(originalBuffer.sampleRate * additionalSeconds);
+//     // Create a new buffer with the desired length
+//     const newBuffer = audioContext.createBuffer(originalBuffer.numberOfChannels, originalBuffer.length + additionalSamples, originalBuffer.sampleRate);
+//     // Iterate over each channel
+//     for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
+//         const originalData = originalBuffer.getChannelData(channel);
+//         const newData = newBuffer.getChannelData(channel);
+//         // Copy the original data
+//         newData.set(originalData);
+//         // Fill the remaining portion with silence
+//         for (let i = originalBuffer.length; i < newBuffer.length; i++) {
+//             newData[i] = 0; // Silence
+//         }
+//     }
+//     return newBuffer;
+// }
 
-// like the p5 map() function
-function scale(number, inMin, inMax, outMin, outMax) {
-    return (number - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-}
+// // like the p5 map() function
+// function scale(number, inMin, inMax, outMin, outMax) {
+//     return (number - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+// }
 
-function getPlaybackRate(jogwheelVal) {
-    let floatVal = parseFloat(jogwheelVal);
-    if (floatVal < 0.5) {
-        return scale(floatVal, 0, 0.5, -2, -1);
-    } else {
-        return scale(floatVal, 0.5, 1, 1, 2);
-    }
-}
+// function getPlaybackRate(jogwheelVal) {
+//     let floatVal = parseFloat(jogwheelVal);
+//     if (floatVal < 0.5) {
+//         return scale(floatVal, 0, 0.5, -2, -1);
+//     } else {
+//         return scale(floatVal, 0.5, 1, 1, 2);
+//     }
+// }
 
 
-function playScrubClick(jogwheelValue) {
-    // console.log('playing click');
-    if (!scrubClickSource.isConnected) {
-        scrubClickSource.connect(audioContext.destination);
-    }
-    scrubClickSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
-}
+// function playScrubClick(jogwheelValue) {
+//     // console.log('playing click');
+//     if (!scrubClickSource.isConnected) {
+//         scrubClickSource.connect(audioContext.destination);
+//     }
+//     scrubClickSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
+// }
 
-function muteScrubClick() {
-    // console.log("beep boop");
-    scrubClickSource.disconnect();
-    scrubClickSource.playbackRate.setValueAtTime(1, audioContext.currentTime);
-}
+// function muteScrubClick() {
+//     // console.log("beep boop");
+//     scrubClickSource.disconnect();
+//     scrubClickSource.playbackRate.setValueAtTime(1, audioContext.currentTime);
+// }
 
 
 
