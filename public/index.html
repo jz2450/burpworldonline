@@ -17,9 +17,9 @@
   <div id="container">
     <div class="UI">
       <div id="UIbuttons">
-        <button id="recButton">rec</button>
-        <button id="playButton">play</button>
-        <button id="stopButton">pause</button>
+        <button id="recButton" class="prevent-select">rec</button>
+        <button id="playButton" class="prevent-select">play</button>
+        <button id="stopButton" class="prevent-select">pause</button>
         <!-- <button id="trigButton">retrig</button> -->
       </div>
       <div id="UIsliders">
@@ -28,7 +28,13 @@
           pause
         </label> -->
         <br>
+        <p>⏫</p>
         <input type="range" name="jogwheel" id="jogwheel" min="0" max="1" step="0.01" value="0.5">
+        <br>
+        <br>
+        <br>
+        <br>
+        <p>⏬</p>
       </div>
     </div>
   </div>

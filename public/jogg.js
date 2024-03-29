@@ -1,5 +1,3 @@
-
-
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 export { audioContext };
 
@@ -12,17 +10,70 @@ export { audioContext };
 // "reactive" is for UI elements and feedback
 
 // Ambient objects play on a loop
-class Ambient {
-    constructor(sourceUrl) {
-        this.source = sourceUrl
+export class Ambient {
+    constructor() {
+        this.bufferList = {};
+        this.isPlaying = false;
+        this.gainNode = audioContext.createGain();
+        this.gainNode.gain.value = 0.5;
+        this.gainNode.connect(audioContext.destination);
     }
 
-    startLoop() {
-        // Code goes here
+    async load(soundSheet) {
+        for (let [cue, url] of Object.entries(soundSheet)) {
+            // console.log(`Cue: ${cue}, url: ${url}`);
+            try {
+                let response = await fetch(url);
+                let arrayBuffer = await response.arrayBuffer();
+                let decodedData = await audioContext.decodeAudioData(arrayBuffer);
+                // console.log("buffer loaded");
+                this.bufferList[cue] = decodedData;
+            } catch (error) {
+                console.error('Error loading audio:', error);
+            }
+        }
+        // console.log(this.bufferList);
     }
 
-    stopLoop() {
+    start(soundName) {
+        if (this.isPlaying) {
+            this.stop();
+        }
+        if (!this.source) {
+            this.source = audioContext.createBufferSource();
+            this.source.buffer = this.bufferList[soundName];
+            this.source.loop = true;
+            this.source.connect(this.gainNode);
+            this.source.start(0);
+            this.isPlaying = true;
+        }
+    }
 
+    stop() {
+        this.isPlaying = false;
+        this.source.stop();
+        this.source = null;
+    }
+
+    playOnce(soundName, callback) {
+        if (this.isPlaying) {
+            this.stop();
+        }
+        if (!this.source) {
+            this.source = audioContext.createBufferSource();
+            this.source.buffer = this.bufferList[soundName];
+            // this.source.loop = true;
+            this.source.connect(this.gainNode);
+            this.source.onended = () => {
+                this.isPlaying = false;
+                this.source = null;
+                if (callback) {
+                    callback();
+                }
+            };
+            this.source.start(0);
+            this.isPlaying = true;
+        }
     }
 }
 
@@ -50,10 +101,10 @@ export class Reactive {
                 console.error('Error loading audio:', error);
             }
         }
-        console.log(this.bufferList);
+        // console.log(this.bufferList);
     }
 
-    trigger(soundName, callback) {
+    trigger(soundName, callback) { // callback = function to trigger on end
         if (this.isPlaying) {
             this.interrupt();
         }
@@ -107,7 +158,13 @@ export class Content {
             .then(response => response.arrayBuffer())
             .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
             .then(decodedData => {
+                // console.log("pushing buffer");
                 this.discreteBuffers.push(decodedData);
+            })
+            .catch(error => {
+                console.error('Error loading audio:', error);
+            })
+            .finally(() => {
                 // Check if all audio files have been loaded
                 if (audioUrlArray.length == 0) {
                     console.log("all content cues loaded")
@@ -118,10 +175,8 @@ export class Content {
                 } else {
                     this.loadContentFromUrls(audioUrlArray);
                 }
-            })
-            .catch(error => {
-                console.error('Error loading audio:', error);
             });
+
     }
 
     get state() { // true if is playing

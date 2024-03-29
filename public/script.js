@@ -1,25 +1,27 @@
-// implement ambient sounds
+// redesign, more physical model
 // implement an end of queue sound
 // implement loading sounds FIGURE OUT "LOADING"
-// clean up microphone sound, too artifacty
-// sound for an empty feed??
+// sound for an empty feed?? paused??
 // how do you refresh?
-// redesign, more physical model
-// firebase authentication
-// audio file db per user
 // implement individual threads
-// implement sound when jogwheel past threshold to skip
+// notification when new burp uploaded
+// audio mic input problems
+// throw error if audio in is not decodable
+// clean up microphone sound, too artifacty
+
 
 // RIGHT NOW vvv
-// add labels to the slider! might be part of visual redesign
+// implement sound when jogwheel past threshold to skip
+// firebase authentication
+// audio file db per user
 
 // JOGG.JS
-import { audioContext, Content, Reactive } from "./jogg.js";
+import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 
 // FIREBASE
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, list } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -44,12 +46,17 @@ let recordButton = document.getElementById('recButton');
 
 
 
-
+// AMBIENT FILE NAMES
 let ambientSheet = {
     feed: "/cues/a-feedloopwhisper.mp3",
     loading: "/cues/a-loadingburps.mp3",
     uploading: "/cues/a-uploadingloop.mp3"
 }
+let ambientObject = new Ambient(ambientSheet);
+ambientObject.load(ambientSheet).then(() => {
+    console.log("Ambient cues loaded: " + ambientObject);
+    // ambientObject.start("loading");
+})
 
 
 // REACTIVE FILE NAMES
@@ -68,7 +75,7 @@ let reactiveSheet = {
 // LOAD IN UI ELEMENTS
 let reactiveObject = new Reactive(reactiveSheet);
 reactiveObject.load(reactiveSheet).then(() => {
-    console.log(reactiveObject.bufferList);
+    console.log("Reactive cues loaded: " + reactiveObject);
     reactiveObject.trigger("splash", () => {
         // trigger loading loop
         // console.log("callback from splash!");
@@ -240,6 +247,20 @@ function loadFeed(callback) {
         .catch(error => {
             console.error('Error loading audio:', error);
         });
+
+    // getAllAudioRefs()
+    //     .then((refArray) => { return getUrlsFromRefs(refArray) })
+    //     .then((urls) => {
+    //         contentObject.reset();
+    //         contentObject.loadContentFromUrls(urls);
+    //     })
+    //     .then(() => {
+    //         console.log(contentObject);
+    //         if (callback) callback();
+    //     })
+    //     .catch(error => {
+    //         console.error('Error loading audio:', error);
+    //     });
 }
 
 // function reloadFeed() {
@@ -252,7 +273,7 @@ async function getPageOfAudioRefs() {
     // Create a reference under which you want to list
     const listRef = ref(storage, 'audio');
     const firstPage = await list(listRef, { maxResults: 20 });
-    console.log(firstPage.items);
+    // console.log(firstPage.items);
     return firstPage.items;
 
     // Fetch the second page if there are more elements.
@@ -264,6 +285,13 @@ async function getPageOfAudioRefs() {
     //   // processItems(secondPage.items)
     //   // processPrefixes(secondPage.prefixes)
     // }
+}
+
+async function getAllAudioRefs() {
+    const listRef = ref(storage, 'audio');
+    const res = await listAll(listRef);
+    console.log(res.items);
+    return res.items;
 }
 
 async function getUrlsFromPaths(sourcePathArray) {
@@ -425,15 +453,23 @@ function stopRecording() {
 // upload audio
 function uploadBlob(audioBlob) {
     const uploadref = ref(storage, '/audio/' + Date.now() + '.wav');
-    uploadBytes(uploadref, audioBlob).then((snapshot) => {
-        console.log('Uploaded a blob or file!');
-        // reload feed
-        console.log("reloading feed");
-        loadFeed(() => {
-            reactiveObject.interrupt();
-            reactiveObject.trigger('ready');
+    uploadBytes(uploadref, audioBlob)
+        .then((snapshot) => {
+            console.log('Uploaded a blob or file!');
+            // reload feed
+            console.log("reloading feed");
+            loadFeed(() => {
+                ambientObject.playOnce("loading", () => {
+                    reactiveObject.interrupt();
+                    reactiveObject.trigger('ready');
+                })
+
+            })
         })
-    });
+        .catch(error => {
+            reactiveObject.trigger("error");
+            console.log("error uploading audio: " + error);
+        });
 }
 
 // END OF RECORDING HELPERS
