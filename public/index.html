@@ -10,35 +10,78 @@
 </head>
 
 <body>
-  <div id="splashscreen">
-    <h1>burp world online</h1>
-    <button id="startButton">enter</button>
-  </div>
-  <div id="container">
-    <div class="UI">
-      <div id="UIbuttons">
-        <button id="recButton" class="prevent-select">rec</button>
-        <button id="playButton" class="prevent-select">play</button>
-        <button id="stopButton" class="prevent-select">pause</button>
-        <!-- <button id="trigButton">retrig</button> -->
+  <div id="wrapper">
+    <div id="main-card">
+      <div id="card-header">
+        <a href="/">
+          <img src="images/bwologo.svg" alt="a logo consisting of a globe doing a little burp" height="40p">
+        </a>
+        <p>Beta ver 2.0</p>
       </div>
-      <div id="UIsliders">
-        <!-- <label for="checkbox">
-          <input type="checkbox" name="pauseSwitch" id="pauseSwitch">
-          pause
-        </label> -->
-        <br>
-        <p>⏫</p>
-        <input type="range" name="jogwheel" id="jogwheel" min="0" max="1" step="0.01" value="0.5">
-        <br>
-        <br>
-        <br>
-        <br>
-        <p>⏬</p>
+      <!-- <hr style="margin: 0 20px;"> -->
+      <div style="display:flex;flex-direction:row;justify-content:left;">
+        <div id="card-left">
+          <div id="bwotitle">
+            <h1>BURP WORLD ONLINE</h1>
+          </div>
+          <div id="info-button" class="prevent-select">
+            <h2>ⓘ</h2>
+          </div>
+        </div>
+        <div id="login">
+          <label for="login-input" id="login-prompt" style="margin: 0 0 10px 0;">ENTER YOUR PHONE NUMBER</label>
+          <input type="tel" name="login-input" id="login-input" placeholder="+13472345671" style="width: 200px;">
+          <hr style="margin: 0 0 10px 0;border:none;height:1px;background-color:#D90D0D">
+          <p style="margin: 0 0 10px 0;">You will receive an SMS message for verification, standard rates apply.</p>
+          <button id="login-button">Next</button>
+        </div>
+
       </div>
+
+
+      <div id="splashscreen">
+        <h1>Burp World Online</h1>
+        <div id="captcha-container"></div>
+        <label for="phonenumber">enter your phone number to begin</label>
+        <input id="phonenumber" name="phonenumber" type="text" placeholder="e.g. +13471234567" style="font-size: 16px;">
+        <button id="startButton">submit phone number</button>
+        <label for="verificationnumber">enter your verification number</label>
+        <input id="verificationnumber" name="verificationnumber" type="text" placeholder="00000"
+          style="font-size: 16px;">
+        <button id="verifyButton">submit verification</button>
+      </div>
+      <div id="container">
+        <div class="UI">
+          <div id="UIbuttons">
+            <button id="recButton" class="prevent-select">rec</button>
+            <button id="playButton" class="prevent-select">play</button>
+            <button id="stopButton" class="prevent-select">pause</button>
+            <!-- <button id="trigButton">retrig</button> -->
+          </div>
+          <div id="UIsliders">
+            <!-- <label for="checkbox">
+            <input type="checkbox" name="pauseSwitch" id="pauseSwitch">
+            pause
+          </label> -->
+            <br>
+            <p>⏫</p>
+            <input type="range" name="jogwheel" id="jogwheel" min="0" max="1" step="0.01" value="0.5">
+            <br>
+            <br>
+            <br>
+            <br>
+            <p>⏬</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div id="jjjlogo">
+      <a href="https://joshjoshjosh.net">
+        <img src="images/jjjlogoblack.svg" alt="the joshjoshjosh logo" width="48">
+      </a>
     </div>
   </div>
-
   <script type="module" src="./script.js"></script>
 </body>
 

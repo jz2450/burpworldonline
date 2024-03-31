@@ -1,4 +1,6 @@
 
+// audio file db per user
+// implement individual threads
 // record new sounds
 // implement sound when jogwheel past threshold to skip// redesign, more physical model
 // implement an end of queue sound
@@ -13,9 +15,8 @@
 // synthesis, not audio files
 
 // RIGHT NOW vvv
-// firebase authentication
-// audio file db per user
-// implement individual threads
+// number checking for phone numbers
+// the DB
 
 // JOGG.JS
 import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
@@ -45,17 +46,12 @@ const storage = getStorage();
 const auth = getAuth();
 // auth
 auth.languageCode = 'en';
-let signInAllow = false;
-const recaptchaVerifier = new RecaptchaVerifier(auth, 'startButton', {
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'startButton', {
     'size': 'invisible',
     'callback': (response) => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
-        onSignInSubmit();// change to my own function
-        // console.log(response);
-        // signInAllow = true;
+        console.log("reCAPTCHA solved, allow signInWithPhoneNumber");
     }
 });
-// const appVerifier = window.recaptchaVerifier;
 
 
 // button interface setup
@@ -114,31 +110,42 @@ reactiveObject.load(reactiveSheet).then(() => {
 document.getElementById("startButton").addEventListener('click', () => {
 
     const phoneNumber = document.getElementById("phonenumber").value; // replace function
-    let appVerifier = window.recaptchaVerifier
+    const appVerifier = window.recaptchaVerifier;
     console.log("phone number: " + phoneNumber);
     signInWithPhoneNumber(auth, phoneNumber, appVerifier)
         .then((confirmationResult) => {
             // SMS sent. Prompt user to type the code from the message, then sign the
             // user in with confirmationResult.confirm(code).
             console.log(confirmationResult);
-            window.confirmationResult = confirmationResult;
+            const sentCodeId = confirmationResult.verificationId;
+            document.getElementById("verifyButton").addEventListener('click', () => {
+                console.log("verify button clicked");
+                const code = document.getElementById("verificationnumber").value;
+                confirmationResult.confirm(code).then(function (result) {
+                    var user = result.user;
+                    console.log(user);
+                    console.log("User signed in successfully.");
+                }).catch(function (error) {
+                    console.error("Error while verifying the code", error);
+                });
+            });
             // ...
         }).catch((error) => {
 
-            console.log("SMS not sent: "+error);
+            console.log("SMS not sent: " + error);
             // Error; SMS not sent
             // ...
-            // grecaptcha.reset(window.recaptchaWidgetId);
-
-            // // Or, if you haven't stored the widget ID:
-            // window.recaptchaVerifier.render().then(function (widgetId) {
-            //     grecaptcha.reset(widgetId);
-            // });
+            // Or, if you haven't stored the widget ID:
+            window.recaptchaVerifier.render().then(function (widgetId) {
+                grecaptcha.reset(widgetId);
+            });
         });
 
     // audioContext.resume(); // for chrome
     // document.getElementById("splashscreen").style.display = "none";
 })
+
+
 
 
 // play button
@@ -191,7 +198,6 @@ function jogwheelMoved() {
     if (contentObject.isPlaying) {
         contentObject.scrub(jogwheel.value);
     }
-    // playScrubClick(jogwheel.value);
 }
 
 
@@ -203,7 +209,6 @@ function jogwheelMoved() {
         if (contentObject.isPlaying) {
             contentObject.scrub(jogwheel.value);
         }
-        // muteScrubClick();
     });
 });
 
@@ -216,14 +221,14 @@ function jogwheelMoved() {
 // RECORDING 
 let mediaRecorder;
 let micStream;
-// // 20 mar commenting out to speed up debugging
-navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(stream => {
-        micStream = stream;
-    })
-    .catch(error => {
-        console.error('Error accessing microphone:', error);
-    });
+// commented out for dev 31/3
+// navigator.mediaDevices.getUserMedia({ audio: true })
+//     .then(stream => {
+//         micStream = stream;
+//     })
+//     .catch(error => {
+//         console.error('Error accessing microphone:', error);
+//     });
 
 
 
@@ -233,50 +238,21 @@ navigator.mediaDevices.getUserMedia({ audio: true })
 // Load AMBIENT
 
 // Load REACTIVE
-// we should use an array or object sheet of requested cue sources
-// let scrubClickBuffer;
-// let scrubClickSource = audioContext.createBufferSource();
-// loadReactiveAudio("/burpworldmockaudio/scrub-click.aif");
 
 // Load CONTENT
 
-// // Array to store MULTIPLE audio buffers
-// const contentBuffers = [];
-// let currentContentBuffer;
 
-// // Load each audio file from server into a buffer
-// getMocks()
-//     .then((result) => {
-//         console.log(result);
-//         loadContentAudio(result);
-//     });
+// const mockpaths = [
+//     "mockaudio/burp5.aif",
+//     "mockaudio/response6.aif",
+//     "mockaudio/response3.aif",
+//     "mockaudio/response5.aif"
+// ];
 
-
-const mockpaths = [
-    "mockaudio/burp5.aif",
-    "mockaudio/response6.aif",
-    "mockaudio/response3.aif",
-    "mockaudio/response5.aif"
-];
-
-
-const contentObject = new Content();
-loadFeed();
-
-// getUrlsFromPaths(mockpaths)
-//     .then((urls) => {
-//         contentObject.loadContentFromUrls(urls).then(() => {
-//             console.log(contentObject);
-//         }
-//         ).catch(error => {
-//             console.error('Error loading audio:', error);
-//         });
-//     })
-//     .catch(error => {
-//         console.error('error getting urls from firebase', error);
-//     })
-
-
+function main() {
+    const contentObject = new Content();
+    loadFeed();
+}
 
 
 
@@ -284,21 +260,7 @@ loadFeed();
 // HELPER FUNCTIONS
 
 function loadFeed(callback) {
-    getPageOfAudioRefs()
-        .then((refArray) => { return getUrlsFromRefs(refArray) })
-        .then((urls) => {
-            contentObject.reset();
-            contentObject.loadContentFromUrls(urls);
-        })
-        .then(() => {
-            console.log(contentObject);
-            if (callback) callback();
-        })
-        .catch(error => {
-            console.error('Error loading audio:', error);
-        });
-
-    // getAllAudioRefs()
+    // getPageOfAudioRefs()
     //     .then((refArray) => { return getUrlsFromRefs(refArray) })
     //     .then((urls) => {
     //         contentObject.reset();
@@ -311,6 +273,20 @@ function loadFeed(callback) {
     //     .catch(error => {
     //         console.error('Error loading audio:', error);
     //     });
+
+    getAllAudioRefs()
+        .then((refArray) => { return getUrlsFromRefs(refArray) })
+        .then((urls) => {
+            contentObject.reset();
+            contentObject.loadContentFromUrls(urls);
+        })
+        .then(() => {
+            console.log(contentObject);
+            if (callback) callback();
+        })
+        .catch(error => {
+            console.error('Error loading audio:', error);
+        });
 }
 
 async function getPageOfAudioRefs() {
@@ -426,28 +402,6 @@ async function getCdnURLFromRef(audioRef) {
     })
 }
 
-
-// // get mock urls from server
-// async function getMocks() {
-//     let mockurls = [];
-//     const mockpaths = [
-//         "mockaudio/burp5.aif",
-//         "mockaudio/response6.aif",
-//         "mockaudio/response3.aif",
-//         "mockaudio/response5.aif"
-//     ];
-//     mockpaths.forEach((path) => {
-//         mockurls.push(getCdnURL(path));
-//     });
-//     try {
-//         const results = await Promise.all(mockurls);
-//         console.log("All items processed successfully");
-//         return results;
-//     } catch (error) {
-//         console.error("Error processing items:", error);
-//     }
-// }
-
 // // RECORDING HELPERS
 
 // Variables to store recording state and audio buffers
@@ -517,77 +471,3 @@ function uploadBlob(audioBlob) {
 }
 
 // END OF RECORDING HELPERS
-
-
-// function loadReactiveAudio(audioFile) { // make this work with another arg for loading ALL different UI sounds from array at once
-//     fetch(audioFile)
-//         .then(response => response.arrayBuffer())
-//         .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-//         .then(decodedData => {
-//             scrubClickBuffer = extendBufferWithSilence(decodedData, 0.25);
-//             scrubClickSource.buffer = scrubClickBuffer;
-//             scrubClickSource.loop = true;
-//             scrubClickSource.start();
-//             console.log("all reactive cues loaded")
-//         })
-//         .catch(error => {
-//             console.error('Error loading audio:', error);
-//         });
-// }
-
-// // Function to extend the length of an AudioBuffer with silence
-// function extendBufferWithSilence(originalBuffer, targetLength) {
-//     // Calculate the current duration of the buffer
-//     const currentDuration = originalBuffer.duration;
-//     // Calculate the number of additional seconds needed
-//     const additionalSeconds = targetLength - currentDuration;
-//     // Calculate the number of additional samples needed
-//     const additionalSamples = Math.ceil(originalBuffer.sampleRate * additionalSeconds);
-//     // Create a new buffer with the desired length
-//     const newBuffer = audioContext.createBuffer(originalBuffer.numberOfChannels, originalBuffer.length + additionalSamples, originalBuffer.sampleRate);
-//     // Iterate over each channel
-//     for (let channel = 0; channel < originalBuffer.numberOfChannels; channel++) {
-//         const originalData = originalBuffer.getChannelData(channel);
-//         const newData = newBuffer.getChannelData(channel);
-//         // Copy the original data
-//         newData.set(originalData);
-//         // Fill the remaining portion with silence
-//         for (let i = originalBuffer.length; i < newBuffer.length; i++) {
-//             newData[i] = 0; // Silence
-//         }
-//     }
-//     return newBuffer;
-// }
-
-// // like the p5 map() function
-// function scale(number, inMin, inMax, outMin, outMax) {
-//     return (number - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-// }
-
-// function getPlaybackRate(jogwheelVal) {
-//     let floatVal = parseFloat(jogwheelVal);
-//     if (floatVal < 0.5) {
-//         return scale(floatVal, 0, 0.5, -2, -1);
-//     } else {
-//         return scale(floatVal, 0.5, 1, 1, 2);
-//     }
-// }
-
-
-// function playScrubClick(jogwheelValue) {
-//     // console.log('playing click');
-//     if (!scrubClickSource.isConnected) {
-//         scrubClickSource.connect(audioContext.destination);
-//     }
-//     scrubClickSource.playbackRate.setValueAtTime(getPlaybackRate(jogwheelValue), audioContext.currentTime);
-// }
-
-// function muteScrubClick() {
-//     // console.log("beep boop");
-//     scrubClickSource.disconnect();
-//     scrubClickSource.playbackRate.setValueAtTime(1, audioContext.currentTime);
-// }
-
-
-
-
