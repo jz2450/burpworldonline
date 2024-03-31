@@ -13,9 +13,10 @@
 // throw error if audio in is not decodable
 // clean up microphone sound, too artifacty
 // synthesis, not audio files
+// check if phone number is valid before going to captcha
 
 // RIGHT NOW vvv
-// number checking for phone numbers
+// redesign
 // the DB
 
 // JOGG.JS
@@ -26,9 +27,10 @@ import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-
-// TODO: Add SDKs for Firebase products that you want to use
+// SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
+
+// MAIN FLOW BEGINS
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -46,13 +48,29 @@ const storage = getStorage();
 const auth = getAuth();
 // auth
 auth.languageCode = 'en';
-window.recaptchaVerifier = new RecaptchaVerifier(auth, 'startButton', {
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'login-button', {
     'size': 'invisible',
     'callback': (response) => {
         console.log("reCAPTCHA solved, allow signInWithPhoneNumber");
     }
 });
-
+const loginPrompt = document.getElementById("login-prompt");
+const loginInput = document.getElementById("login-input");
+const loginButton = document.getElementById("login-button");
+const verifyButton = document.createElement('button');
+verifyButton.id = 'verify-button';
+verifyButton.className = 'login-buttons';
+verifyButton.textContent = 'Start burping';
+//enter key submit
+loginInput.addEventListener('keyup', function(event) {
+    // Number 13 is the "Enter" key on the keyboard
+    if (event.key === 'Enter' || event.keyCode === 13) {
+      // Cancel the default action, if needed
+      event.preventDefault();
+      // Trigger the button element with a click
+      loginButton.click();
+    }
+  });
 
 // button interface setup
 let jogwheel = document.getElementById('jogwheel');
@@ -101,15 +119,45 @@ reactiveObject.load(reactiveSheet).then(() => {
     });
 })
 
+// MAIN FLOW
+
+// RECORDING 
+let mediaRecorder;
+let micStream;
+// commented out for dev 31/3
+// navigator.mediaDevices.getUserMedia({ audio: true })
+//     .then(stream => {
+//         micStream = stream;
+//     })
+//     .catch(error => {
+//         console.error('Error accessing microphone:', error);
+//     });
+
+
+
+// const mockpaths = [
+//     "mockaudio/burp5.aif",
+//     "mockaudio/response6.aif",
+//     "mockaudio/response3.aif",
+//     "mockaudio/response5.aif"
+// ];
+
+function main() {
+    const contentObject = new Content();
+    loadFeed();
+}
+
+
 
 
 
 
 // BUTTON EVENT LISTENERS
-// start button
-document.getElementById("startButton").addEventListener('click', () => {
+// login button
+loginButton.addEventListener('click', submitPhoneNumber);
 
-    const phoneNumber = document.getElementById("phonenumber").value; // replace function
+function submitPhoneNumber() {
+    const phoneNumber = loginInput.value;
     const appVerifier = window.recaptchaVerifier;
     console.log("phone number: " + phoneNumber);
     signInWithPhoneNumber(auth, phoneNumber, appVerifier)
@@ -118,21 +166,22 @@ document.getElementById("startButton").addEventListener('click', () => {
             // user in with confirmationResult.confirm(code).
             console.log(confirmationResult);
             const sentCodeId = confirmationResult.verificationId;
-            document.getElementById("verifyButton").addEventListener('click', () => {
-                console.log("verify button clicked");
-                const code = document.getElementById("verificationnumber").value;
-                confirmationResult.confirm(code).then(function (result) {
-                    var user = result.user;
-                    console.log(user);
-                    console.log("User signed in successfully.");
-                }).catch(function (error) {
-                    console.error("Error while verifying the code", error);
-                });
+            // clear out field and reconfig button
+            // loginButton.removeEventListener('click', submitPhoneNumber);
+            loginPrompt.innerHTML = "ENTER VERIFICATION CODE";
+            loginInput.value = "";
+            loginInput.placeholder = "Code";
+
+            loginButton.parentNode.replaceChild(verifyButton, loginButton);
+            // loginButton.innerHTML = "Log in";
+            verifyButton.addEventListener('click', () => {
+                submitVerificationNumber(confirmationResult);
             });
-            // ...
         }).catch((error) => {
 
             console.log("SMS not sent: " + error);
+
+            document.getElementById("login-message").innerHTML = "Please enter a valid phone number with area code.";
             // Error; SMS not sent
             // ...
             // Or, if you haven't stored the widget ID:
@@ -140,12 +189,22 @@ document.getElementById("startButton").addEventListener('click', () => {
                 grecaptcha.reset(widgetId);
             });
         });
+}
 
-    // audioContext.resume(); // for chrome
-    // document.getElementById("splashscreen").style.display = "none";
-})
-
-
+function submitVerificationNumber(confirmationResult) {
+    console.log("verify button clicked");
+    const code = loginInput.value;
+    confirmationResult.confirm(code).then(function (result) {
+        var user = result.user;
+        console.log(user);
+        console.log("User signed in successfully.");
+        // audioContext.resume(); // for chrome
+        // document.getElementById("splashscreen").style.display = "none";
+    }).catch(function (error) {
+        console.error("Error while verifying the code", error);
+        document.getElementById("login-message").innerHTML = "Could not verify code, please try again.";
+    });
+}
 
 
 // play button
@@ -189,7 +248,6 @@ stopButton.addEventListener('click', () => {
 })
 
 // jogwheel
-
 jogwheel.addEventListener('input', jogwheelMoved);
 jogwheel.addEventListener('change', jogwheelMoved);
 
@@ -211,49 +269,6 @@ function jogwheelMoved() {
         }
     });
 });
-
-
-
-
-
-// MAIN FLOW
-
-// RECORDING 
-let mediaRecorder;
-let micStream;
-// commented out for dev 31/3
-// navigator.mediaDevices.getUserMedia({ audio: true })
-//     .then(stream => {
-//         micStream = stream;
-//     })
-//     .catch(error => {
-//         console.error('Error accessing microphone:', error);
-//     });
-
-
-
-
-
-
-// Load AMBIENT
-
-// Load REACTIVE
-
-// Load CONTENT
-
-
-// const mockpaths = [
-//     "mockaudio/burp5.aif",
-//     "mockaudio/response6.aif",
-//     "mockaudio/response3.aif",
-//     "mockaudio/response5.aif"
-// ];
-
-function main() {
-    const contentObject = new Content();
-    loadFeed();
-}
-
 
 
 

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script type="module" src="./jogg.js"></script>
   <link rel="stylesheet" href="styles/style.css">
-  <title>burp world web controller</title>
+  <title>Burp World Online</title>
 </head>
 
 <body>
@@ -30,10 +30,10 @@
         </div>
         <div id="login">
           <label for="login-input" id="login-prompt" style="margin: 0 0 10px 0;">ENTER YOUR PHONE NUMBER</label>
-          <input type="tel" name="login-input" id="login-input" placeholder="+13472345671" style="width: 200px;">
+          <input type="tel" name="login-input" id="login-input" placeholder="+13475551234" style="width: 220px;">
           <hr style="margin: 0 0 10px 0;border:none;height:1px;background-color:#D90D0D">
-          <p style="margin: 0 0 10px 0;">You will receive an SMS message for verification, standard rates apply.</p>
-          <button id="login-button">Next</button>
+          <p id="login-message" style="margin: 0 0 10px 0;">You will receive an SMS message for verification, standard rates apply.</p>
+          <button id="login-button" class="login-buttons">Next</button>
         </div>
 
       </div>
@@ -41,10 +41,9 @@
 
       <div id="splashscreen">
         <h1>Burp World Online</h1>
-        <div id="captcha-container"></div>
-        <label for="phonenumber">enter your phone number to begin</label>
-        <input id="phonenumber" name="phonenumber" type="text" placeholder="e.g. +13471234567" style="font-size: 16px;">
-        <button id="startButton">submit phone number</button>
+        <!-- <label for="phonenumber">enter your phone number to begin</label>
+        <input id="phonenumber" name="phonenumber" type="text" placeholder="e.g. +13471234567" style="font-size: 16px;"> -->
+        <!-- <button id="startButton">submit phone number</button> -->
         <label for="verificationnumber">enter your verification number</label>
         <input id="verificationnumber" name="verificationnumber" type="text" placeholder="00000"
           style="font-size: 16px;">
@@ -77,7 +76,7 @@
 
     </div>
     <div id="jjjlogo">
-      <a href="https://joshjoshjosh.net">
+      <a href="https://joshjoshjosh.net" target="_blank">
         <img src="images/jjjlogoblack.svg" alt="the joshjoshjosh logo" width="48">
       </a>
     </div>
