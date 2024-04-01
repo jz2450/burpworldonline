@@ -4,6 +4,11 @@ html, body {
 
   margin: 0;
   padding: 0;
+
+
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
 }
 
 h1 {
@@ -39,6 +44,18 @@ p {
   height: 100vh;
 }
 
+#fixedComponents {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: 80px;
+  height: 470px;
+  border-radius: 32px;
+  z-index: 20;
+  transform: translateY(-23px);
+  margin-right: 255px;
+}
+
 #main-card {
   background-color: #D9D9D9;
   width: 340px;
@@ -56,7 +73,7 @@ p {
   right: 0;
   /* background-color: #D90D0D; */
   margin-top: 55px;
-  margin-right: 5px;
+  margin-right: 15px;
   opacity: 0;
   visibility: hidden;
   font-size: 13px;
@@ -83,7 +100,7 @@ body.authenticated #button-label-area {
   margin-bottom: 75px;
 }
 
-#card-header {
+#card-header, #card-header2{
   margin: 20px 20px 10px;
   display: flex;
   justify-content: space-between;
@@ -96,22 +113,27 @@ body.authenticated #version-number {
   transition: opacity 0.5s, visibility 0.5s;
 }
 
-#card-left {
+#card-left, #card-left2 {
   display:flex;
   flex-direction: column;
   border-right: 1px solid #333;
 }
 
-#bwotitle {
+#bwotitle, #bwotitle2{
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   margin: 10px 20px 0px 20px;
 }
 
-#info-button {
+#info-button, #info-button2 {
   margin: 10px 0 0 0;
   cursor: pointer;
   text-align: center;
+}
+
+#info-button, #bwotitle, #logo, #card-left {
+  opacity: 0;
+  visibility: hidden;
 }
 
 #login {
@@ -199,7 +221,8 @@ body.authenticated .grecaptcha-badge {
 
 .buttonDiv {
   margin-left: 150px;
-  padding-right: 150px;
+  margin-right: 100px;
+  padding-right: 50px;
   box-sizing: border-box;
 }
 

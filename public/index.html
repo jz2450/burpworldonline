@@ -11,6 +11,24 @@
 
 <body>
   <div id="wrapper">
+    <div id="fixedComponents">
+      <div id="card-header2">
+        <a href="/">
+          <img src="images/bwologo.svg" alt="a logo consisting of a globe doing a little burp" height="40p">
+        </a>
+      </div>
+      <!-- <hr style="margin: 0 20px;"> -->
+      <div style="display:flex;flex-direction:row;justify-content:left;">
+        <div id="card-left2">
+          <div id="bwotitle2" class="prevent-select">
+            <h1>BURP WORLD ONLINE</h1>
+          </div>
+          <div id="info-button2" class="prevent-select">
+            <h2>ⓘ</h2>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="main-card">
       <div id="button-label-area">
         <div id="rec-label">Rec</div>
@@ -19,7 +37,7 @@
         <div id="scrub-label">FF ← &nbsp;&nbsp; → RW</div>
       </div>
       <div id="card-header">
-        <a href="/">
+        <a href="/" id="logo">
           <img src="images/bwologo.svg" alt="a logo consisting of a globe doing a little burp" height="40p">
         </a>
         <p id="version-number">Beta ver 2.0</p>
@@ -58,7 +76,7 @@
         </div>
         <input type="range" name="jogwheel" id="jogwheel" min="0" max="1" step="0.01" value="0.5">
       </div>
-      
+
     </div>
 
 

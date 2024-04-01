@@ -16,11 +16,11 @@
 // check if phone number is valid before going to captcha
 // firebase check if someone is logged in already
 // animate joshjoshjosh logo to left
+// button labels keep shifting??
+// info button
 
 
 // RIGHT NOW vvv
-// redesign
-// info button
 // the DB
 // stop button should interrupt everything
 
@@ -279,11 +279,9 @@ let stopButtonDiv = document.getElementById("stopButtonDiv");
 ['mousedown', 'touchstart'].forEach(function (e) {
     recButtonDiv.addEventListener(e, function () {
         recordButton.classList.add('button-clicked');
-        recordButton.addEventListener(e, function () {
-            reactiveObject.trigger("prerecord", () => {
-                console.log("recording now");
-                startRecording();
-            })
+        reactiveObject.trigger("prerecord", () => {
+            console.log("recording now");
+            startRecording();
         })
     });
     playButtonDiv.addEventListener(e, function () {
