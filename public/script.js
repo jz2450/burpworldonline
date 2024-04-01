@@ -14,10 +14,15 @@
 // clean up microphone sound, too artifacty
 // synthesis, not audio files
 // check if phone number is valid before going to captcha
+// firebase check if someone is logged in already
+// animate joshjoshjosh logo to left
+
 
 // RIGHT NOW vvv
 // redesign
+// info button
 // the DB
+// stop button should interrupt everything
 
 // JOGG.JS
 import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
@@ -61,24 +66,28 @@ const verifyButton = document.createElement('button');
 verifyButton.id = 'verify-button';
 verifyButton.className = 'login-buttons';
 verifyButton.textContent = 'Start burping';
-//enter key submit
-loginInput.addEventListener('keyup', function(event) {
-    // Number 13 is the "Enter" key on the keyboard
+// ENTER KEY
+loginInput.addEventListener('keyup', function (event) {
     if (event.key === 'Enter' || event.keyCode === 13) {
-      // Cancel the default action, if needed
-      event.preventDefault();
-      // Trigger the button element with a click
-      loginButton.click();
+        event.preventDefault();
+        loginButton.click();
     }
-  });
+});
+//  CHECK FOR PREVIOUS SIGN IN // saving this for later
+// if (auth.currentUser) {
+//     // skip login
+//     console.log("User previously logged in");
+// } else console.log("no user logged in");
 
-// button interface setup
+// BUTTON SETUP
 let jogwheel = document.getElementById('jogwheel');
 let stopButton = document.getElementById('stopButton');
 let playButton = document.getElementById('playButton');
 let recordButton = document.getElementById('recButton');
 
-
+// RECORDING SETUP
+let mediaRecorder;
+let micStream;
 
 // AMBIENT FILE NAMES
 let ambientSheet = {
@@ -86,15 +95,7 @@ let ambientSheet = {
     loading: "/cues/a-loadingburps.mp3",
     uploading: "/cues/a-uploadingloop.mp3"
 }
-let ambientObject = new Ambient(ambientSheet);
-ambientObject.load(ambientSheet).then(() => {
-    console.log("Ambient cues loaded: " + ambientObject);
-    // ambientObject.start("loading");
-})
-
-
 // REACTIVE FILE NAMES
-
 let reactiveSheet = {
     error: "/cues/r-error.mp3",
     feedEnd: "/cues/r-feedend.mp3",
@@ -107,47 +108,48 @@ let reactiveSheet = {
     uploading: "/cues/a-uploadingloop.mp3"
 }
 // LOAD IN UI ELEMENTS
+let ambientLoaded = false;
+let reactiveLoaded = false;
+let ambientObject = new Ambient(ambientSheet);
+ambientObject.load(ambientSheet).then(() => {
+    console.log("Ambient cues loaded: " + ambientObject);
+    ambientLoaded = true;
+})
 let reactiveObject = new Reactive(reactiveSheet);
 reactiveObject.load(reactiveSheet).then(() => {
     console.log("Reactive cues loaded: " + reactiveObject);
-    reactiveObject.trigger("splash", () => {
-        // trigger loading loop
-        // console.log("callback from splash!");
-
-        reactiveObject.trigger("ready"); // this should actually be attached to the load function instead of the previous trigger function
-        // maybe with the loading loop
-    });
+    reactiveLoaded = true;
 })
+const contentObject = new Content();
+
 
 // MAIN FLOW
-
-// RECORDING 
-let mediaRecorder;
-let micStream;
-// commented out for dev 31/3
-// navigator.mediaDevices.getUserMedia({ audio: true })
-//     .then(stream => {
-//         micStream = stream;
-//     })
-//     .catch(error => {
-//         console.error('Error accessing microphone:', error);
-//     });
+function main() { // to be called after log in authorised
+    // hide captcha
+    document.body.classList.add('authenticated');
+    // animate card to go to the left, bring up buttons
+    document.getElementById('main-card').classList.add('animateToLeft');
 
 
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            micStream = stream;
+            audioContext.resume(); // for chrome
 
-// const mockpaths = [
-//     "mockaudio/burp5.aif",
-//     "mockaudio/response6.aif",
-//     "mockaudio/response3.aif",
-//     "mockaudio/response5.aif"
-// ];
+            reactiveObject.trigger("splash", () => {
+                // trigger loading loop
+                // console.log("callback from splash!");
 
-function main() {
-    const contentObject = new Content();
-    loadFeed();
+                reactiveObject.trigger("ready"); // this should actually be attached to the load function instead of the previous trigger function
+                // maybe with the loading loop
+            });
+
+            loadFeed();
+        })
+        .catch(error => {
+            console.error('Error accessing microphone:', error);
+        });
 }
-
-
 
 
 
@@ -169,7 +171,7 @@ function submitPhoneNumber() {
             // clear out field and reconfig button
             // loginButton.removeEventListener('click', submitPhoneNumber);
             loginPrompt.innerHTML = "ENTER VERIFICATION CODE";
-            loginInput.value = "";
+            loginInput.value = "123456"; // set to "" for production
             loginInput.placeholder = "Code";
 
             loginButton.parentNode.replaceChild(verifyButton, loginButton);
@@ -198,54 +200,53 @@ function submitVerificationNumber(confirmationResult) {
         var user = result.user;
         console.log(user);
         console.log("User signed in successfully.");
-        // audioContext.resume(); // for chrome
-        // document.getElementById("splashscreen").style.display = "none";
+        main(); // commented out for dev
     }).catch(function (error) {
         console.error("Error while verifying the code", error);
         document.getElementById("login-message").innerHTML = "Could not verify code, please try again.";
     });
 }
 
+// INTERFACE BUTTONS
 
 // play button
-playButton.addEventListener('click', async () => {
-    // reactiveObject.trigger('play');
-    if (contentObject && !contentObject.isPlaying) {
-        contentObject.play();
-    }
-});
+// playButton.addEventListener('click', async () => {
+//     // reactiveObject.trigger('play');
+//     if (contentObject && !contentObject.isPlaying) {
+//         contentObject.play();
+//     }
+// });
 
-// record button
-['mousedown', 'touchstart'].forEach(function (e) {
-    recordButton.addEventListener(e, function () {
-        reactiveObject.trigger("prerecord", () => {
-            console.log("recording now");
-            startRecording();
-        })
-    })
-});
+// // record button
+// ['mousedown', 'touchstart'].forEach(function (e) {
+//     recordButton.addEventListener(e, function () {
+//         reactiveObject.trigger("prerecord", () => {
+//             console.log("recording now");
+//             startRecording();
+//         })
+//     })
+// });
 
-['mouseup', 'touchend'].forEach(function (e) {
-    recordButton.addEventListener(e, function () {
-        // check if we're still in prerecord stage
-        if (isRecording) {
-            stopRecording();
-        } else if (reactiveObject.isPlaying) {
-            console.log("recording cancelled");
-            reactiveObject.interrupt();
-        }
+// ['mouseup', 'touchend'].forEach(function (e) {
+//     recordButton.addEventListener(e, function () {
+//         // check if we're still in prerecord stage
+//         if (isRecording) {
+//             stopRecording();
+//         } else if (reactiveObject.isPlaying) {
+//             console.log("recording cancelled");
+//             reactiveObject.interrupt();
+//         }
 
-    });
-});
-
+//     });
+// });
 
 // stop button
-stopButton.addEventListener('click', () => {
-    // reactiveObject.trigger('pause');
-    if (contentObject.isPlaying) {
-        contentObject.pause();
-    }
-})
+// stopButton.addEventListener('click', () => {
+//     // reactiveObject.trigger('pause');
+//     if (contentObject.isPlaying) {
+//         contentObject.pause();
+//     }
+// })
 
 // jogwheel
 jogwheel.addEventListener('input', jogwheelMoved);
@@ -270,9 +271,65 @@ function jogwheelMoved() {
     });
 });
 
+let recButtonDiv = document.getElementById("recButtonDiv");
+let playButtonDiv = document.getElementById("playButtonDiv");
+let stopButtonDiv = document.getElementById("stopButtonDiv");
+
+// adding animations on click
+['mousedown', 'touchstart'].forEach(function (e) {
+    recButtonDiv.addEventListener(e, function () {
+        recordButton.classList.add('button-clicked');
+        recordButton.addEventListener(e, function () {
+            reactiveObject.trigger("prerecord", () => {
+                console.log("recording now");
+                startRecording();
+            })
+        })
+    });
+    playButtonDiv.addEventListener(e, function () {
+        playButton.classList.add('button-clicked');
+    });
+    stopButtonDiv.addEventListener(e, function () {
+        stopButton.classList.add('button-clicked');
+    });
+});
+
+['mouseup', 'touchend'].forEach(function (e) {
+    recButtonDiv.addEventListener(e, function () {
+        recordButton.classList.remove('button-clicked');
+        // check if we're still in prerecord stage
+        if (isRecording) {
+            stopRecording();
+        } else if (reactiveObject.isPlaying) {
+            console.log("recording cancelled");
+            reactiveObject.interrupt();
+        }
+    });
+    playButtonDiv.addEventListener(e, function () {
+        playButton.classList.remove('button-clicked');
+        // reactiveObject.trigger('play');
+        if (contentObject && !contentObject.isPlaying) {
+            contentObject.play();
+        }
+    });
+    stopButtonDiv.addEventListener(e, function () {
+        stopButton.classList.remove('button-clicked');
+        if (contentObject.isPlaying) {
+            contentObject.pause();
+        }
+    });
+});
+
 
 
 // HELPER FUNCTIONS
+
+const mockpaths = [
+    "mockaudio/burp5.aif",
+    "mockaudio/response6.aif",
+    "mockaudio/response3.aif",
+    "mockaudio/response5.aif"
+];
 
 function loadFeed(callback) {
     // getPageOfAudioRefs()

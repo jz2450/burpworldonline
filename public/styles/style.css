@@ -45,7 +45,42 @@ p {
   height: 470px;
   border-radius: 32px;
   box-shadow: 0px 14px 18px rgba(0, 0, 0, 0.25);
-  /* padding: 20px; */
+  z-index: 10;
+  position: relative;
+  /* added for dev */
+  /* display:none; */
+}
+
+#button-label-area {
+  position: absolute;
+  right: 0;
+  /* background-color: #D90D0D; */
+  margin-top: 55px;
+  margin-right: 5px;
+  opacity: 0;
+  visibility: hidden;
+  font-size: 13px;
+}
+
+body.authenticated #button-label-area {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+#button-label-area > div {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+#rec-label {
+  margin-bottom: 55px;
+}
+#play-label {
+  margin-bottom: 50px;
+}
+#back-label {
+  margin-bottom: 75px;
 }
 
 #card-header {
@@ -55,9 +90,16 @@ p {
   align-items: flex-end;
 }
 
+body.authenticated #version-number {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
 #card-left {
   display:flex;
   flex-direction: column;
+  border-right: 1px solid #333;
 }
 
 #bwotitle {
@@ -73,13 +115,18 @@ p {
 }
 
 #login {
-  border-left: 1px solid #333;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   /* align-items: center; */
   padding: 10px 20px 0 10px;
   max-width: 100%;
+}
+
+body.authenticated #login {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
 }
 
 label {
@@ -102,72 +149,102 @@ label {
   height: 3em;
   font-size: 15px;
   border-radius: 15px;
+  background-color: black;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
+
+body.authenticated .grecaptcha-badge {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+@keyframes moveToLeft {
+  to {
+    transform: translateX(-53%);
+  }
+}
+
+.animateToLeft {
+  animation: moveToLeft 1s forwards;
+}
+
+
+
+
+
+
+
+
 
 #container {
-    display: flex;
-    flex-direction: row;
+    position: absolute;
+    transform: translateY(-15px);
+    /* align-self: center; */
+    /* flex-direction: row;
     justify-content: center;
-    align-items: center;
+    align-items: center; */
     /* height: 100vh; */
-}
-
-#splashscreen {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 100;
-  background: white;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-  padding: 0;
-}
-
-.UI {
-    display: none; 
-    /* used to be flex */
 }
 
 #UIbuttons {
   display: flex;
   flex-direction: column;
-  width: 6em; 
+  align-items: center;
+  /* width: 6em;  */
   gap: 3px;
 }
-#UIsliders {
+
+.buttonDiv {
+  margin-left: 150px;
+  padding-right: 150px;
+  box-sizing: border-box;
+}
+
+#recButton {
+  background-color: #D90D0D;
+  color: white;
+  width: 30px;
+  height: 60px;
+  border-top-right-radius: 8px;
+}
+
+#playButton {
+  height: 16em;
+  background-color: black;
+  color: white;
+  width: 30px;
+  height: 95px;
+}
+
+#stopButton {
+  height: 8em;
+  background-color: black;
+  color: white;
+  width: 30px;
+  height: 60px;
+  border-bottom-right-radius: 8px;
+}
+
+.button-clicked {
+  transform: translateX(-20px);
+  transition: transform 0.1s;
+}
+
+button {
+  border: none;
+}
+
+/* #UIsliders {
   display: flex;
   flex-direction: column;
   width: 6em;
   justify-content: center;
   align-items: center;
-}
+} */
 
-#recButton {
-  background-color: red;
-  color: white;
-  height: 8em;
-}
-
-#playButton {
-  height: 16em;
-}
-
-#stopButton {
-  height: 8em;
-}
-
-button {
-  background-color: black;
-  color: white;
-  border-radius: 2em;
-  border: none;
-  cursor: pointer;
-}
 
 input[type=range]{
     pointer-events: none;
@@ -185,46 +262,48 @@ input[type=range]{
 #jogwheel {
   -webkit-appearance: none;
   appearance: none;
-  height: 6em;
-  width: 200px;
-  margin-top: 100px;
+  height: 30px;
+  width: 180px;
   background: transparent;
   outline: none;
-  border-radius: 2em;
   transform: rotate(90deg);
+  position: relative;
+  /* left: -77px; */
+  top: 80px;
+  margin-bottom: 160px;
 }
 
  #jogwheel::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  height: 6em;
-  width: 3em;
+  height: 30px;
+  width: 60px;
   background: black;
-  border-radius: 2em;
+  border-top-right-radius: 15px;
+  border-top-left-radius: 15px;
   cursor: pointer;
 }
 
 #jogwheel::-moz-range-thumb {
   appearance: none;
-  height: 6em;
-  width: 3em;
+  height: 30px;
+  width: 60px;
   background: black;
-  border-radius: 2em;
+  border-top-right-radius: 15px;
+  border-top-left-radius: 15px;
   cursor: pointer;
 }
 
 #jogwheel::-webkit-slider-runnable-track {
-  height: 6em;
-  width: 200px;
-  background: #ddd;
-  border-radius: 2em; 
+  height: 30px;
+  width: 180px;
+  /* background-color: #333; */
 }
 
 #jogwheel::-moz-range-track {
-  height: 6em;
-  width: 200px;
-  background: #ddd;
-  border-radius: 2em; 
+  height: 30px;
+  width: 180;
+  /* background-color: #333;  */
 }
 
 #jjjlogo {
