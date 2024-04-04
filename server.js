@@ -3,9 +3,12 @@ import express from 'express';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
-// import archiver from 'archiver';
+import mongoose from 'mongoose';
 
 const app = express();
+
+
+
 
 // Your Express app configuration and routes go here
 app.use(express.static("public"));
@@ -29,76 +32,16 @@ const credentials = {
 
 const httpApp = express();
 
-httpApp.get("*", function(req, res, next) {
-    res.redirect("https://" + req.headers.host + req.path);
+httpApp.get("*", function (req, res, next) {
+  res.redirect("https://" + req.headers.host + req.path);
 });
 
-http.createServer(httpApp).listen(80, function() {
-    console.log("HTTP server listening on port 80");
+http.createServer(httpApp).listen(80, function () {
+  console.log("HTTP server listening on port 80");
 });
 
 // Create an HTTPS server with the Express app
 const httpsServer = https.createServer(credentials, app);
-
-
-
-// get feed
-// app.get('/feed', (req, res) => {
-
-// });
-
-// // get folder of audio files from 24 hours ago
-// app.get('/feed', (req, res) => {
-//   const folderPath = './audio';
-//   // Read the files in the folder
-//   fs.readdir(folderPath, (err, files) => {
-//     if (err) {
-//       return res.status(500).send('Error reading folder');
-//     }
-//     // Filter files based on your condition
-//     let timeThreshold = Date.now() - 86400000; // 24 hours previous
-//     const filteredFiles = files.filter(file => {
-//       const fileNameWithoutExtension = file.split('.')[0];
-//       const fileNumber = parseInt(fileNameWithoutExtension);
-//       return !isNaN(fileNumber) && fileNumber > timeThreshold;
-//     });
-//     const zipStream = fs.createWriteStream('filtered_files.zip');
-//     const archive = archiver('zip', {
-//       zlib: { level: 9 } // Set compression level
-//     });
-//     archive.pipe(zipStream);
-
-//     // Append filtered files to the archive
-//     filteredFiles.forEach(file => {
-//       const filePath = `${folderPath}/${file}`;
-//       archive.append(fs.createReadStream(filePath), { name: file });
-//     });
-
-//     // Finalize the archive
-//     archive.finalize();
-
-//     // Set headers for the response
-//     res.set('Content-Type', 'application/zip');
-//     res.set('Content-Disposition', 'attachment; filename=filtered_files.zip');
-
-//     // Pipe the zip stream to the response
-//     zipStream.pipe(res);
-//   });
-// });
-
-// const rawParser = bodyParser.raw();
-// // receive audio blobs to save
-// app.post('/upload', rawParser, (req, res) => {
-//   console.log("body: ", req.body);
-//   if (!req.body) { // || !req.body.audioBlob
-//     return res.status(400).json({ error: 'Audio data is missing' });
-//   }
-//   fs.writeFile('./audio/' + Date.now() + '.wav', req.body, function (err) {
-//     if (err) console.log(err);
-//     else console.log("It's saved!");
-//   });
-//   res.status(200).json({ message: 'Audio file uploaded successfully' });
-// });
 
 // Start the server
 httpsServer.listen(443, () => {
@@ -116,3 +59,79 @@ httpsServer.listen(443, () => {
 //   "/burpworldmockaudio/response6.aif"
 // ]
 
+// DB 
+//mongo
+const url = 'mongodb://localhost:27017/burpworldonline';
+mongoose.connect(url);
+const Schema = mongoose.Schema;
+const userSchema = new Schema({
+  firebaseUserID: String,
+  userThreads: [],
+  seenThreads: [],
+})
+const userModel = mongoose.model('userModel', userSchema);
+const threadSchema = new Schema({
+  threadID: String,
+  dateCreated: Date,
+  postUrls: [],
+})
+const threadModel = mongoose.model('threadModel', threadSchema);
+// console.log(mongoose);
+
+app.get("/", async (req, res) => {
+  try {// // Find a document
+    MyModel.findOne({ username: 'John' }, (err, doc) => {
+      if (err) {
+        console.error(err);
+        res.status(500).send(err);
+      } else {
+        console.log(doc);
+        res.status(200).send(doc);
+      }
+    });
+  }
+  catch (error) {
+  }
+});
+
+
+// Create record API
+app.post("/", async (req, res) => {
+  try {
+    // // Create a new document
+    const myDocument = new MyModel({ username: 'John' });
+    myDocument.save();
+    console.log("created new profile", myDocument);
+    res.status(200).send("created new profile");
+  }
+  catch (error) {
+  }
+});
+
+
+// Update record API
+app.put("/", async (req, res) => {
+  try {
+    // // Update a document
+    MyModel.findOneAndUpdate({ name: 'John' }, { name: 'Jane' }, (err, doc) => {
+      console.log(doc);
+    });
+    res.status(200).send("updated data")
+  }
+  catch (error) {
+  }
+})
+
+
+// Delete record API
+app.delete("/", async (req, res) => {
+  try {
+    // Delete a document
+    MyModel.findOneAndDelete({ name: 'Jane' }, (err) => {
+      console.log('Document deleted');
+    });
+    res.status(200).send("deleted data")
+  }
+  catch (error) {
+  }
+})

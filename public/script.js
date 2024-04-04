@@ -2,11 +2,11 @@
 // audio file db per user
 // implement individual threads
 // record new sounds
+// TUTORIAL FLOW
 // implement sound when jogwheel past threshold to skip// redesign, more physical model
 // implement an end of queue sound
 // implement loading sounds FIGURE OUT "LOADING"
 // sound for an empty feed?? paused??
-// TUTORIAL FLOW
 // how do you refresh?
 // notification when new burp uploaded
 // audio mic input problems
@@ -18,6 +18,8 @@
 // animate joshjoshjosh logo to left
 // button labels keep shifting??
 // info button
+// fix scrolling on mobile
+// turn on and off voice cues
 
 
 // RIGHT NOW vvv
@@ -143,6 +145,27 @@ function main() { // to be called after log in authorised
                 reactiveObject.trigger("ready"); // this should actually be attached to the load function instead of the previous trigger function
                 // maybe with the loading loop
             });
+
+
+            // db test, pls delete
+            fetch('/', {
+                method: 'POST', // or 'PUT'
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username: 'John' }),
+            })
+                .then(response => {
+                    console.log(response);
+                    // response.json();
+                })
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+            /////////////
 
             loadFeed();
         })
