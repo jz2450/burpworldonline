@@ -1,4 +1,3 @@
-
 // audio file db per user
 // implement individual threads
 // record new sounds
@@ -20,6 +19,9 @@
 // info button
 // fix scrolling on mobile
 // turn on and off voice cues
+// fix error throwing as success in db helpers
+// clean up READ endpoints on the server side
+// cover for double ups of UIDs
 
 
 // RIGHT NOW vvv
@@ -54,6 +56,7 @@ const firebase = initializeApp(firebaseConfig);
 const storage = getStorage();
 const auth = getAuth();
 // auth
+let burpuid;
 auth.languageCode = 'en';
 window.recaptchaVerifier = new RecaptchaVerifier(auth, 'login-button', {
     'size': 'invisible',
@@ -146,26 +149,12 @@ function main() { // to be called after log in authorised
                 // maybe with the loading loop
             });
 
-
-            // db test, pls delete
-            fetch('/', {
-                method: 'POST', // or 'PUT'
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username: 'John' }),
-            })
-                .then(response => {
-                    console.log(response);
-                    // response.json();
-                })
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
+            dbGetUnseenThread("testUid")
+                .then((result) => {
+                    console.log(result);
                 });
-            /////////////
+
+
 
             loadFeed();
         })
@@ -221,8 +210,9 @@ function submitVerificationNumber(confirmationResult) {
     const code = loginInput.value;
     confirmationResult.confirm(code).then(function (result) {
         var user = result.user;
+        burpuid = user.uid;
         console.log(user);
-        console.log("User signed in successfully.");
+        console.log("User signed in successfully: " + burpuid);
         main(); // commented out for dev
     }).catch(function (error) {
         console.error("Error while verifying the code", error);
@@ -374,7 +364,7 @@ function loadFeed(callback) {
             contentObject.loadContentFromUrls(urls);
         })
         .then(() => {
-            console.log(contentObject);
+            // console.log(contentObject);
             if (callback) callback();
         })
         .catch(error => {
@@ -403,7 +393,7 @@ async function getPageOfAudioRefs() {
 async function getAllAudioRefs() {
     const listRef = ref(storage, 'audio');
     const res = await listAll(listRef);
-    console.log(res.items);
+    // console.log(res.items);
     return res.items;
 }
 
@@ -543,7 +533,7 @@ function stopRecording() {
 
 // upload audio
 function uploadBlob(audioBlob) {
-    const uploadref = ref(storage, '/audio/' + Date.now() + '.wav');
+    const uploadref = ref(storage, '/audio/' + burpuid + "/" + Date.now() + '.wav');
     uploadBytes(uploadref, audioBlob)
         .then((snapshot) => {
             console.log('Uploaded a blob or file!');
@@ -554,7 +544,6 @@ function uploadBlob(audioBlob) {
                     reactiveObject.interrupt();
                     reactiveObject.trigger('ready');
                 })
-
             })
         })
         .catch(error => {
@@ -564,3 +553,173 @@ function uploadBlob(audioBlob) {
 }
 
 // END OF RECORDING HELPERS
+
+// DATABASE HELPERS
+// CREATE
+function dbCreateUser(uid, burpUrl) {
+    fetch('/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: "user",
+            username: uid,
+            burpUrl: burpUrl,
+        }),
+    })
+        .then(response => {
+            return response.text();
+        })
+        .then(data => {
+            console.log('Success:', data);
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+function dbCreateThread(uid, burpUrl) {
+    fetch('/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: "thread",
+            threadAuthor: "testuid",
+            posts: [{
+                author: "testuid",
+                url: "testburpUrl",
+            }],
+        }),
+    })
+        .then(response => {
+            return response.text();
+        })
+        .then(data => {
+            console.log('Success:', data);
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+// READ
+function dbGetUnseenThreads(uid) { // Returns array
+    fetch('/thread/?' + new URLSearchParams({
+        type: "unseen-threads",
+        userID: "uid",
+    }))
+        .then(response => {
+            return response.json().catch(() => response.text());
+        })
+        .then(data => {
+            if (typeof data === 'string') {
+                console.error('Failed to parse JSON, received string: ', data);
+            } else {
+                console.log('Success:', data);
+            }
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+function dbGetSeenThreads(uid) { // Returns array
+    fetch('/thread/?' + new URLSearchParams({
+        type: "seen-threads",
+        userID: "uid",
+    }))
+        .then(response => {
+            return response.json().catch(() => response.text());
+        })
+        .then(data => {
+            if (typeof data === 'string') {
+                console.error('Failed to parse JSON, received string: ', data);
+            } else {
+                console.log('Success:', data);
+            }
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+function dbGetUserThreads(uid) {
+    fetch('/user/?' + new URLSearchParams({
+        userID: "uid",
+    }))
+        .then(response => {
+            return response.json().catch(() => response.text());
+        })
+        .then(data => {
+            if (typeof data === 'string') {
+                console.error('Failed to parse JSON, received string: ', data);
+            } else {
+                console.log('Success:', data);
+            }
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+
+// PUT
+function dbLogSeen(uid, threadId) {
+    fetch('/', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: "log-seen",
+            userID: uid,
+            threadID: threadId,
+        }),
+    })
+        .then(response => {
+            return response.json().catch(() => response.text());
+        })
+        .then(data => {
+            console.log('Success:', data);
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+
+function dbRespondToThread(uid, threadId, url) {
+    fetch('/', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            type: "new-response",
+            threadID: "66130315e44b4200cb147187",
+            post: {
+                author: "testuid",
+                url: "testburpUrl",
+            },
+        }),
+    })
+        .then(response => {
+            return response.json().catch(() => response.text());
+        })
+        .then(data => {
+            console.log('Success:', data);
+            return data;
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+}
+

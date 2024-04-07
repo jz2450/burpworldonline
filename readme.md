@@ -1,6 +1,8 @@
 # Burp World Online
 
-It's time to celebrate ugly and celebrate stupid. It's time to honour the mighty burp with an online social space that it deserves. Using a sound-based user interface, Burp World Online makes it easy to share your burps with other gassy folks without the distraction of screens and visual social biases.
+It's time to celebrate the ugly and the stupid. It's time to honour the mighty burp with an online social space that it deserves. Using a sound-based user interface, Burp World Online makes it easy to share your burps with other gassy folks without the distraction of screens and visual social biases.
+
+Sound is the ultimate online metaphysical embodiment.
 
 Information Design + Interaction Design + Product Design + Sound + Tech & Society
 
