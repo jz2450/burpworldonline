@@ -1,5 +1,10 @@
 # Burp World Online
 
+Burp World Online is an exploration of sound design as interface design. By reimagining the online social space as one that is free of the distraction of screens and visual social biases, it fosters a new way of interacting with the computer and with each other through sound, voice, and listening.
+
+
+
+_this is the old text_
 It's time to celebrate the ugly and the stupid. It's time to honour the mighty burp with an online social space that it deserves. Using a sound-based user interface, Burp World Online makes it easy to share your burps with other gassy folks without the distraction of screens and visual social biases.
 
 Sound is the ultimate online metaphysical embodiment.
@@ -46,15 +51,15 @@ The web client is built with HTML, CSS, JS, and uses [Jogg.js](), a custom-built
 ![Tech Stack Diagram](./doc/images/tech-stack-diagram.png)
 
 ## Research and Context
-Burp World Online is heavily influenced by voice apps such as WeChat, Whatsapp, Clubhouse, and the voice message feature in iMessage. Similar user generated podcasting apps include Cappuccino, and Amp, Spotify for Podcasters (fka Anchor).
+Burp World Online uses a "For You Page" style of content organisation, relying on an algorithm to populate the main feed.
 
-This project takes into account the legacy and sociological impacts of sound based interactions, including voice assistants, DTMF Auto Attendants, telephone operators, radio programming. This project also investigates the realm of sound design, especially as it pertains to game and interface design. 
+Burp World Online is heavily influenced by voice apps such as WeChat, Whatsapp, Clubhouse, and the voice message feature in iMessage. Similar user generated podcasting apps include Cappuccino, Amp, and Spotify for Podcasters (fka Anchor).
 
-The development of Burp World Online investigated the world of audio centric Javascript libraries. Initial developments attempted to use Tone.js as the basis of UI elements but it was found that the timeline-based workflows were too limiting to create the variation in audio elements. Development shifted to a lower level scope, working directly with the Web Audio API and ultimately resulted in the creation of Jogg.js.
+This project takes into account the legacy and sociological impacts of sound based interactions, including voice assistants, DTMF Auto Attendants, telephone operators, and radio programming. This project also investigates the realm of sound design, especially as it pertains to game and interface design. 
 
-Sound design, sonic branding, 
+The development of Burp World Online investigated the world of audio Javascript libraries. Initial developments attempted to use Tone.js as the basis of UI elements but it was found that the timeline-based workflows were too limiting to create the variation in audio element playback. Development shifted to a lower level scope, working directly with the Web Audio API and ultimately resulted in the creation of Jogg.js.
 
-(about 100-250 words): This should be a summary of the research you did for your project: your influences, similar products/projects, technical research (e.g. how you chose the materials you chose). A lot of this can be pulled from last semester’s project proposal.
+Sound design, sonic branding, etc etc
 
 ### Further Reading
 "Designing Sound" by Andy Farnell
