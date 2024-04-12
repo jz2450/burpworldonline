@@ -97,22 +97,28 @@ let micStream;
 
 // AMBIENT FILE NAMES
 let ambientSheet = {
-    feed: "/cues/a-feedloopwhisper.mp3",
-    loading: "/cues/a-loadingburps.mp3",
-    uploading: "/cues/a-uploadingloop.mp3"
+    loading: "/cues/loadingloop.mp3",
+    profile: "/cues/profileloop.mp3",
+    thread: "/cues/threadloop.mp3",
 }
 // REACTIVE FILE NAMES
 let reactiveSheet = {
-    error: "/cues/r-error.mp3",
-    feedEnd: "/cues/r-feedend.mp3",
-    feedStart: "/cues/r-feedstart.mp3",
-    pause: "/cues/r-pause.mp3",
-    play: "/cues/r-play.mp3",
-    prerecord: "cues/r-prerecord.mp3",
-    ready: "cues/r-ready.mp3",
-    splash: "cues/r-splash.mp3",
-    uploading: "/cues/a-uploadingloop.mp3"
+    autonext: "/cues/autonext.mp3",
+    autoprev: "/cues/autoprev.mp3",
+    back: "/cues/back.mp3",
+    error: "/cues/error.mp3",
+    nextcloser: "/cues/nextcloser.mp3",
+    nextopener: "/cues/nextopener.mp3",
+    prevcloser: "/cues/prevcloser.mp3",
+    prevopener: "/cues/prevopener.mp3",
+    recordstart: "/cues/recordstart.mp3",
+    select: "/cues/select.mp3",
+    sourceburp: "/cues/sourceburp.mp3",
+    splash: "/cues/splash.mp3",
+    success: "/cues/success.mp3",
 }
+
+
 // LOAD IN UI ELEMENTS
 let ambientLoaded = false;
 let reactiveLoaded = false;
@@ -369,7 +375,7 @@ let threadQueue;
 // thread >> post >> ref
 async function newLoadFeed(callback) { // working on this 7/4
     try {
-        ambientObject.
+        
         let threads = await dbGetUnseenThreads(burpuid); // returns an array of threads
         if (threads.length < 1) {
             throw new Error("no new threads");
