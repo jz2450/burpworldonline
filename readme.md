@@ -1,20 +1,13 @@
 # Burp World Online
 
-Burp World Online is an exploration of sound design as interface design. By reimagining the online social space as one that is free of the distraction of screens and visual social biases, it fosters a new way of interacting with the computer and with each other through sound, voice, and listening.
+**Interaction Design + Product Design + Sound + Tech & Society**
 
+[burpworld.online](https://burpworld.online)
 
-
-_this is the old text_
-It's time to celebrate the ugly and the stupid. It's time to honour the mighty burp with an online social space that it deserves. Using a sound-based user interface, Burp World Online makes it easy to share your burps with other gassy folks without the distraction of screens and visual social biases.
-
-Sound is the ultimate online metaphysical embodiment.
-
-Information Design + Interaction Design + Product Design + Sound + Tech & Society
+Burp World Online is an exploration of sound design as interface design. By reimagining the online social space as one that is free of the distraction of screens and visual social biases, it forges a new way of interacting with the computer and each other through our hands, voice, and ears.
 
 ![Burp World Online Cover Image](./doc/images/cover-image.png)
 
-
-[burpworld.online](https://burpworld.online)
 
 ## Table of Contents
 
@@ -22,6 +15,14 @@ Information Design + Interaction Design + Product Design + Sound + Tech & Societ
 - [Key Features](#key-features)
 - [Technical Details](#technical-details)
 - [Research and Context](#research-and-context)
+
+## Key Features
+Burp World Online allows you to:
+* post your burps
+* listen to burps from other users
+* respond to burp threads
+* quickly scrub through audio threads
+* navigate through user profiles
 
 ## Abstract
 Burps have long been disrespected as an unserious form of sonic media. Labelled "vulgar" and "classless", the art of the belch is often responded to with vitriol and grimaces. 
@@ -34,15 +35,11 @@ I've found a gap in the market: there's no social media platform designed for th
 
 Burp World Online is made for the serious burper, using a fully sound-based user interface that respects the righteous burp. We've made it casual, spontaneous, and effortless to share your burp with the world.
 
-## Key Features
-Burp World Online allows you to:
-* post your burps
-* listen to burps from other users
-* respond to burp threads
-* quickly scrub through audio threads
-* navigate through user profiles
+Sound is the ultimate online metaphysical embodiment.
 
 ## Technical Details
+
+The sounds were designed in Ableton. 
 
 Burp World Online runs on Node.js with Express, using Firebase for authentication and storage, and uses a MongoDB database. [burpworld.online](burpworld.online) is deployed on Digital Ocean
 

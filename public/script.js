@@ -1,32 +1,33 @@
-// audio file db per user
-// implement individual threads
-// record new sounds
-// TUTORIAL FLOW
-// implement sound when jogwheel past threshold to skip// redesign, more physical model
+
+// firebase check if someone is logged in already
+// written manual
+// info button
+// check if phone number is valid before going to captcha
+// implement sound when jogwheel past threshold to skip
 // implement an end of queue sound
 // implement loading sounds FIGURE OUT "LOADING"
 // sound for an empty feed?? paused??
 // how do you refresh?
 // notification when new burp uploaded
 // audio mic input problems
-// throw error if audio in is not decodable
 // clean up microphone sound, too artifacty
 // synthesis, not audio files
-// check if phone number is valid before going to captcha
-// firebase check if someone is logged in already
 // animate joshjoshjosh logo to left
 // button labels keep shifting??
-// info button
-// fix scrolling on mobile
 // turn on and off voice cues
 // fix error throwing as success in db helpers
-// clean up READ endpoints on the server side
-// cover for double ups of UIDs
+// format errors from server endpoints
+// clickable threads
+// profiles should have all posts not just threads
+// tutorial flow
+// delete
 
 
 // RIGHT NOW vvv
-// the DB
+// develop ux flow
+// loadFeed from db
 // stop button should interrupt everything
+// sound not working mobile :/
 
 // JOGG.JS
 import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
@@ -138,6 +139,7 @@ function main() { // to be called after log in authorised
 
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
+            stream.getTracks().forEach(track => track.stop());
             micStream = stream;
             audioContext.resume(); // for chrome
 
@@ -149,11 +151,16 @@ function main() { // to be called after log in authorised
                 // maybe with the loading loop
             });
 
-            dbGetUnseenThread("testUid")
-                .then((result) => {
-                    console.log(result);
-                });
+            // check db for user account
+            // if not, onboardingFlow()
+            // if yes, loadUnseenFeed()
+                // if all seen, loadSeenFeed()
+                // *click* goToUserProfile()
 
+
+            // back press and hold back to home
+            // back press once to pause
+            // back press again to go back (SAVES PLACE)
 
 
             loadFeed();
@@ -343,20 +350,6 @@ const mockpaths = [
 ];
 
 function loadFeed(callback) {
-    // getPageOfAudioRefs()
-    //     .then((refArray) => { return getUrlsFromRefs(refArray) })
-    //     .then((urls) => {
-    //         contentObject.reset();
-    //         contentObject.loadContentFromUrls(urls);
-    //     })
-    //     .then(() => {
-    //         console.log(contentObject);
-    //         if (callback) callback();
-    //     })
-    //     .catch(error => {
-    //         console.error('Error loading audio:', error);
-    //     });
-
     getAllAudioRefs()
         .then((refArray) => { return getUrlsFromRefs(refArray) })
         .then((urls) => {
@@ -370,6 +363,49 @@ function loadFeed(callback) {
         .catch(error => {
             console.error('Error loading audio:', error);
         });
+}
+
+let threadQueue;
+// thread >> post >> ref
+async function newLoadFeed(callback) { // working on this 7/4
+    try {
+        ambientObject.
+        let threads = await dbGetUnseenThreads(burpuid); // returns an array of threads
+        if (threads.length < 1) {
+            throw new Error("no new threads");
+        } else {
+            console.log(threads);
+            threadQueue = threads;
+            let postArray = [...threadQueue.shift().posts];
+            let storageRefs = postArray.map(post => post.storageRef);
+            let urls = await getUrlsFromRefs(storageRefs);
+            contentObject.reset();
+            contentObject.loadContentFromUrls(urls);
+            if (callback) callback();
+        }
+    } catch (error) {
+        console.error('Error loading audio:', error);
+    }
+
+}
+
+async function loadNextThread(callback) {
+    // play reactive cue for next thread
+    // play loading ambient cue
+    try {
+        if (threadQueue.length < 1) {
+            throw new Error("no more threads");
+        } else {
+            let postArray = [...threadQueue.shift().posts];
+            let storageRefs = postArray.map(post => post.storageRef);
+            let urls = await getUrlsFromRefs(storageRefs);
+            contentObject.reset();
+            contentObject.loadContentFromUrls(urls);
+            if (callback) callback();
+        }
+    } catch (error) {
+        console.error('Error loading audio:', error);
+    }
 }
 
 async function getPageOfAudioRefs() {
@@ -495,32 +531,33 @@ function startRecording() {
     if (contentObject.isPlaying) {
         contentObject.pause();
     }
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then((stream) => {
+            micStream = stream;
+            mediaRecorder = new MediaRecorder(micStream);
+            mediaRecorder.ondataavailable = event => {
+                recordedChunks.push(event.data);
+            };
 
-    mediaRecorder = new MediaRecorder(micStream);
-    mediaRecorder.ondataavailable = event => {
-        recordedChunks.push(event.data);
-    };
+            // Event handler for when recording stops
+            mediaRecorder.onstop = () => {
+                // Create a Blob from the recorded chunks
+                const recordedBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+                // For demonstration, let's just log the Blob URL
+                console.log(recordedBlob);
+                console.log('Recorded audio Blob URL:', URL.createObjectURL(recordedBlob));
+                // Reset recording state and recordedChunks array
+                // upload to server
+                uploadBlob(recordedBlob);
 
-    // Event handler for when recording stops
-    mediaRecorder.onstop = () => {
-        // Create a Blob from the recorded chunks
-        const recordedBlob = new Blob(recordedChunks, { type: 'audio/wav' });
-        // For demonstration, let's just log the Blob URL
-        console.log(recordedBlob);
-        console.log('Recorded audio Blob URL:', URL.createObjectURL(recordedBlob));
-        // Reset recording state and recordedChunks array
-        // upload to server
-        uploadBlob(recordedBlob);
-
-        isRecording = false;
-        recordedChunks = [];
-
-
-    };
-    // Start recording
-    mediaRecorder.start();
-    // Update recording state
-    isRecording = true;
+                isRecording = false;
+                recordedChunks = [];
+            };
+            // Start recording
+            mediaRecorder.start();
+            // Update recording state
+            isRecording = true;
+        })
 }
 
 // Function to stop recording
@@ -528,6 +565,7 @@ function stopRecording() {
     if (isRecording) {
         reactiveObject.trigger('uploading');
         mediaRecorder.stop();
+        micStream.getTracks().forEach(track => track.stop());
     }
 }
 
@@ -537,13 +575,13 @@ function uploadBlob(audioBlob) {
     uploadBytes(uploadref, audioBlob)
         .then((snapshot) => {
             console.log('Uploaded a blob or file!');
+            // adding to db
+            dbCreateThread(burpuid, uploadref);
             // reload feed
             console.log("reloading feed");
             loadFeed(() => {
-                ambientObject.playOnce("loading", () => {
-                    reactiveObject.interrupt();
-                    reactiveObject.trigger('ready');
-                })
+                reactiveObject.interrupt();
+                reactiveObject.trigger('ready');
             })
         })
         .catch(error => {
@@ -556,7 +594,7 @@ function uploadBlob(audioBlob) {
 
 // DATABASE HELPERS
 // CREATE
-function dbCreateUser(uid, burpUrl) {
+function dbCreateUser(uid, burpRef) {
     fetch('/', {
         method: 'POST',
         headers: {
@@ -565,10 +603,13 @@ function dbCreateUser(uid, burpUrl) {
         body: JSON.stringify({
             type: "user",
             username: uid,
-            burpUrl: burpUrl,
+            burpRef: burpRef,
         }),
     })
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.text();
         })
         .then(data => {
@@ -580,7 +621,7 @@ function dbCreateUser(uid, burpUrl) {
         });
 }
 
-function dbCreateThread(uid, burpUrl) {
+function dbCreateThread(uid, burpRef) {
     fetch('/', {
         method: 'POST',
         headers: {
@@ -588,14 +629,17 @@ function dbCreateThread(uid, burpUrl) {
         },
         body: JSON.stringify({
             type: "thread",
-            threadAuthor: "testuid",
+            threadAuthor: uid,
             posts: [{
-                author: "testuid",
-                url: "testburpUrl",
+                author: uid,
+                storageRef: burpRef,
             }],
         }),
     })
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.text();
         })
         .then(data => {
@@ -611,9 +655,12 @@ function dbCreateThread(uid, burpUrl) {
 function dbGetUnseenThreads(uid) { // Returns array
     fetch('/thread/?' + new URLSearchParams({
         type: "unseen-threads",
-        userID: "uid",
+        userID: uid,
     }))
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.json().catch(() => response.text());
         })
         .then(data => {
@@ -632,9 +679,12 @@ function dbGetUnseenThreads(uid) { // Returns array
 function dbGetSeenThreads(uid) { // Returns array
     fetch('/thread/?' + new URLSearchParams({
         type: "seen-threads",
-        userID: "uid",
+        userID: uid,
     }))
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.json().catch(() => response.text());
         })
         .then(data => {
@@ -652,9 +702,12 @@ function dbGetSeenThreads(uid) { // Returns array
 
 function dbGetUserThreads(uid) {
     fetch('/user/?' + new URLSearchParams({
-        userID: "uid",
+        userID: uid,
     }))
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.json().catch(() => response.text());
         })
         .then(data => {
@@ -685,6 +738,9 @@ function dbLogSeen(uid, threadId) {
         }),
     })
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.json().catch(() => response.text());
         })
         .then(data => {
@@ -696,7 +752,7 @@ function dbLogSeen(uid, threadId) {
         });
 }
 
-function dbRespondToThread(uid, threadId, url) {
+function dbRespondToThread(uid, threadId, burpRef) {
     fetch('/', {
         method: 'PUT',
         headers: {
@@ -704,14 +760,17 @@ function dbRespondToThread(uid, threadId, url) {
         },
         body: JSON.stringify({
             type: "new-response",
-            threadID: "66130315e44b4200cb147187",
+            threadID: threadId,
             post: {
-                author: "testuid",
-                url: "testburpUrl",
+                author: uid,
+                storageRef: burpRef,
             },
         }),
     })
         .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.text}`);
+            }
             return response.json().catch(() => response.text());
         })
         .then(data => {

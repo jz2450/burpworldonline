@@ -66,7 +66,7 @@ mongoose.connect(url);
 const Schema = mongoose.Schema;
 const userSchema = new Schema({
   userID: String,
-  userBurpUrl: String,
+  userBurpRef: Object,
   seenThreadIds: [],
 })
 const userModel = mongoose.model('userModel', userSchema);
@@ -85,7 +85,7 @@ app.post("/", async (req, res) => {
     if (req.body.type == "user") {
       const newUserDoc = new userModel({
         userID: req.body.username,
-        userBurpUrl: req.body.burpUrl,
+        userBurpRef: req.body.burpRef,
         seenThreadIds: [],
       });
       newUserDoc.save();
@@ -108,69 +108,51 @@ app.post("/", async (req, res) => {
   }
 });
 
-// READ
+// READ // turned off self filter, now shows all threads , threadAuthor: { $ne: req.query.userID }"
 app.get("/thread", async (req, res) => {
   try {
     if (req.query.type == "unseen-threads") {
       // get NEW UNSEEN thread
-      try {
-        const userDoc = await userModel.findOne({
-          userID: req.query.userID
-        });
-        console.log(userDoc);
-        const seenList = userDoc.seenThreadIds;
-        try {
-          // Find threads that the user has not seen
-          const threadDocs = await threadModel.aggregate([
-            { $match: { _id: { $nin: seenList }, threadAuthor: { $ne: req.query.userID } } },
+      const userDoc = await userModel.findOne({
+        userID: req.query.userID
+      });
+      if (!userDoc) throw new Error("user not found");
+      console.log(userDoc);
+      const seenList = userDoc.seenThreadIds;
+      // Find threads that the user has not seen
+      const threadDocs = await threadModel.aggregate([
+        { $match: { _id: { $nin: seenList } } },
 
-          ]);
-          console.log(threadDocs);
-          if (threadDocs.length < 1) {
-            throw new Error("No unseen threads");
-          } else {
-            res.status(200).send(threadDocs);
-          }
-        } catch (err) {
-          console.error("could not find a yet listened thread: " + err);
-          res.status(500).send({ error: "could not find a yet listened thread: " + err });
-        }
-      } catch (err) {
-        console.error("user not found: " + err);
-        res.status(500).send("user not found: " + err);
+      ]);
+      console.log(threadDocs);
+      if (threadDocs.length < 1) {
+        throw new Error("No unseen threads");
+      } else {
+        res.status(200).send(threadDocs);
       }
     } else if (req.query.type == "seen-threads") {
       // get SEEN thread
-      try {
-        const userDoc = await userModel.findOne({
-          userID: req.query.userID
-        });
-        console.log(userDoc);
-        const seenList = userDoc.seenThreadIds;
-        try {
-          // Find threads that the user has not seen
-          const threadDocs = await threadModel.aggregate([
-            { $match: { _id: { $in: seenList }, threadAuthor: { $ne: req.query.userID } } },
-          ]);
-          console.log(threadDocs);
-          if (threadDocs.length < 1) {
-            throw new Error("No unseen threads");
-          } else {
-            res.status(200).send(threadDocs);
-          }
-        } catch (err) {
-          console.error("could not find a listened thread: " + err);
-          res.status(500).send({ error: "could not find a listened thread: " + err });
-        }
-      } catch (err) {
-        console.error("user not found: " + err);
-        res.status(500).send("user not found: " + err);
+      const userDoc = await userModel.findOne({
+        userID: req.query.userID
+      });
+      if (!userDoc) throw new Error("user not found");
+      console.log(userDoc);
+      const seenList = userDoc.seenThreadIds;
+      // Find threads that the user has not seen
+      const threadDocs = await threadModel.aggregate([
+        { $match: { _id: { $in: seenList } } },
+      ]);
+      console.log(threadDocs);
+      if (threadDocs.length < 1) {
+        throw new Error("No unseen threads");
+      } else {
+        res.status(200).send(threadDocs);
       }
     }
   } catch (error) {
-    console.log("error while getting a thread: ", error);
-    res.status(500).send(error);
-  }
+  console.log("error while getting a thread: ", error);
+  res.status(500).send(error);
+}
 });
 
 // get user profile
@@ -192,7 +174,7 @@ app.get("/user", async (req, res) => {
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send({ error: "An error occurred while fetching the threads: " + err });
+    res.status(500).send({ error: "An error occurred while fetching the threads from user: " + err });
   }
 });
 
