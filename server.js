@@ -158,7 +158,7 @@ app.get("/thread", async (req, res) => {
 // get user profile
 app.get("/user", async (req, res) => {
   try {
-    if (req.query.userID) {
+    if (req.query.type == "user-threads") {
       // Find threads that the user created
       const threadDocs = await threadModel.find({
         threadAuthor: req.query.userID
@@ -169,12 +169,25 @@ app.get("/user", async (req, res) => {
       } else {
         res.status(200).send(threadDocs);
       }
+    } else if (req.query.type == "profile") {
+      const profile = await userModel.findOne({
+        userID: req.query.userID
+      });
+      if (!profile) {
+        res.status(200).send({missing: "profile"});
+      } else {
+        if (!profile.userBurpRef) {
+          res.status(200).send({missing: "burp"});
+        } else {
+          res.status(200).send(profile);
+        }
+      }
     } else {
-      throw new Error("userID is empty in query");
+      res.status(400).send({ error: "Invalid query type" });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send({ error: "An error occurred while fetching the threads from user: " + err });
+    res.status(500).send({ error: "An error occurred while fetching the user: " + err.message });
   }
 });
 

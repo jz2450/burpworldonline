@@ -1,7 +1,15 @@
+// SET UP AUDIO CONTEXT
+// let audioContext;
+// try {
+//     let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+//     console.log(stream.getAudioTracks()[0].getSettings().sampleRate);
+//     audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: stream.getAudioTracks()[0].getSettings().sampleRate });
+//     stream.getTracks().forEach(track => track.stop());
+// } catch (error) {
+//     console.error('Error getting sample rate from microphone:', error);
+// }
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 export { audioContext };
-
-
 
 // PLAYBACK
 // three basic UI element source objects
@@ -13,10 +21,20 @@ export { audioContext };
 export class Ambient {
     constructor() {
         this.bufferList = {};
-        this.isPlaying = false;
+        this._isPlaying = false;
+        this.wasInterrupted = false;
         this.gainNode = audioContext.createGain();
         this.gainNode.gain.value = 0.5;
         this.gainNode.connect(audioContext.destination);
+        this.filter = audioContext.createBiquadFilter();
+        this.filter.type = 'lowpass';
+        this.filter.frequency.value = 20000;
+        // this.filter.Q.value = 10;
+        this.filter.connect(this.gainNode)
+    }
+
+    get isPlaying() { // true if is playing
+        return this._isPlaying;
     }
 
     async load(soundSheet) {
@@ -36,43 +54,57 @@ export class Ambient {
     }
 
     start(soundName) {
-        if (this.isPlaying) {
+        if (this._isPlaying) {
             this.stop();
         }
-        if (!this.source) {
-            this.source = audioContext.createBufferSource();
-            this.source.buffer = this.bufferList[soundName];
-            this.source.loop = true;
-            this.source.connect(this.gainNode);
-            this.source.start(0);
-            this.isPlaying = true;
-        }
+        // if (!this.source) {
+        this.source = audioContext.createBufferSource();
+        this.source.buffer = this.bufferList[soundName];
+        this.source.loop = true;
+        this.source.connect(this.filter);
+        this.source.start(0);
+        this._isPlaying = true;
+        // }
     }
 
     stop() {
-        this.isPlaying = false;
-        this.source.stop();
-        this.source = null;
+        if (this.source) {
+            this.source.stop();
+            this.source = null;
+        }
+        this._isPlaying = false;
+        this.wasInterrupted = true;
     }
 
-    playOnce(soundName, callback) {
-        if (this.isPlaying) {
+    playOnce(soundName, callback) { // callback checks if an event is done for example loading content
+        if (this._isPlaying) {
             this.stop();
         }
-        if (!this.source) {
-            this.source = audioContext.createBufferSource();
-            this.source.buffer = this.bufferList[soundName];
-            // this.source.loop = true;
-            this.source.connect(this.gainNode);
-            this.source.onended = () => {
-                this.isPlaying = false;
-                this.source = null;
+        // if (!this.source) {
+        this.wasInterrupted = false;
+        this.source = audioContext.createBufferSource();
+        this.source.buffer = this.bufferList[soundName];
+        this.source.loop = false;
+        this.source.connect(this.filter);
+        this.source.onended = () => {
+            this._isPlaying = false;
+            this.source = null;
+            if (!this.wasInterrupted) {
                 if (callback) {
                     callback();
                 }
-            };
-            this.source.start(0);
-            this.isPlaying = true;
+            }
+        };
+        this.source.start(0);
+        this._isPlaying = true;
+        // }
+    }
+
+    lowPass(on) {
+        if (on) {
+            this.filter.frequency.value = 300;
+        } else {
+            this.filter.frequency.value = 20000;
         }
     }
 }
@@ -83,8 +115,12 @@ export class Reactive {
 
     constructor() { // accepts a json with names as keys and urls as values
         this.bufferList = {};
-        this.isPlaying = false;
+        this._isPlaying = false;
         this.wasInterrupted = false;
+    }
+
+    get isPlaying() { // true if is playing
+        return this._isPlaying;
     }
 
 
@@ -105,32 +141,27 @@ export class Reactive {
     }
 
     trigger(soundName, callback) { // callback = function to trigger on end
-        if (this.isPlaying) {
-            this.interrupt();
-        }
         if (!this.source) {
+            this.wasInterrupted = false;
             this.source = audioContext.createBufferSource();
             this.source.buffer = this.bufferList[soundName];
             this.source.connect(audioContext.destination);
             this.source.onended = () => {
-                // console.log("poop");
-                this.isPlaying = false;
+                this._isPlaying = false;
                 this.source = null;
                 if (!this.wasInterrupted) {
                     if (callback) {
                         callback();
                     }
                 }
-                this.wasInterrupted = false;
-
             };
             this.source.start(0);
+            this._isPlaying = true;
         }
-        this.isPlaying = true;
     }
 
     interrupt() {
-        this.isPlaying = false;
+        this._isPlaying = false;
         this.wasInterrupted = true;
         this.source.stop();
         this.source = null;
@@ -144,7 +175,7 @@ export class Content {
 
     constructor() {
         this.discreteBuffers = [];
-        this.isPlaying = false;
+        this._isPlaying = false;
         this.wasPaused = false;
         this.startTime = 0;
         this.startOffset = 0;
@@ -179,17 +210,18 @@ export class Content {
 
     }
 
-    get state() { // true if is playing
-        return this.isPlaying;
+    get isPlaying() { // true if is playing
+        return this._isPlaying;
     }
 
     play() {
         if (!this.source) {
+            this.wasPaused = false;
             this.source = audioContext.createBufferSource();
             this.source.buffer = this.buffer;
             this.source.connect(audioContext.destination);
             this.source.onended = () => {
-                this.isPlaying = false;
+                this._isPlaying = false;
                 this.source = null;
                 if (!this.wasPaused) {
                     this.startOffset = 0;
@@ -197,16 +229,15 @@ export class Content {
             };
             this.source.start(0, this.startOffset % this.buffer.duration);
             this.scrubStartTime = audioContext.currentTime;
+            this._isPlaying = true;
         }
-        this.isPlaying = true;
-        this.wasPaused = false;
     }
 
     pause() {
         this.source.stop();
         this.startOffset += (audioContext.currentTime - this.scrubStartTime) * this.playbackRate;
         this.source = null;
-        this.isPlaying = false;
+        this._isPlaying = false;
         this.wasPaused = true;
     }
 
@@ -224,7 +255,7 @@ export class Content {
 
     reset() {
         this.discreteBuffers = [];
-        this.isPlaying = false;
+        this._isPlaying = false;
         this.startTime = 0;
         this.startOffset = 0;
         this.playbackRate = 1;

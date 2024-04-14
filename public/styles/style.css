@@ -183,6 +183,7 @@ label {
 
 .login-buttons {
   height: 3em;
+  width: 15em;
   font-size: 15px;
   border-radius: 15px;
   background-color: black;

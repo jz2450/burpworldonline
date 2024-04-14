@@ -20,7 +20,12 @@
 // clickable threads
 // profiles should have all posts not just threads
 // tutorial flow
-// delete
+// delete endpoint
+// jogg object not stopping when retrigg
+// super slow mo bug????
+// fix play retrig bug
+// log out
+// blank screen before auto login
 
 
 // RIGHT NOW vvv
@@ -71,7 +76,8 @@ const loginButton = document.getElementById("login-button");
 const verifyButton = document.createElement('button');
 verifyButton.id = 'verify-button';
 verifyButton.className = 'login-buttons';
-verifyButton.textContent = 'Start burping';
+verifyButton.textContent = 'Enter';
+
 // ENTER KEY
 loginInput.addEventListener('keyup', function (event) {
     if (event.key === 'Enter' || event.keyCode === 13) {
@@ -79,11 +85,6 @@ loginInput.addEventListener('keyup', function (event) {
         loginButton.click();
     }
 });
-//  CHECK FOR PREVIOUS SIGN IN // saving this for later
-// if (auth.currentUser) {
-//     // skip login
-//     console.log("User previously logged in");
-// } else console.log("no user logged in");
 
 // BUTTON SETUP
 let jogwheel = document.getElementById('jogwheel');
@@ -94,6 +95,25 @@ let recordButton = document.getElementById('recButton');
 // RECORDING SETUP
 let mediaRecorder;
 let micStream;
+let isRecording = false;
+let recordedChunks = [];
+let pendingBlob;
+
+try {
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+    micStream = stream;
+} catch (err) {
+    console.log("error getting mic input");
+}
+
+// MOCK AUDIO FOR DEVELOPMENT
+const mockpaths = [
+    "mockaudio/burp5.aif",
+    "mockaudio/response6.aif",
+    "mockaudio/response3.aif",
+    "mockaudio/response5.aif"
+];
 
 // AMBIENT FILE NAMES
 let ambientSheet = {
@@ -116,73 +136,194 @@ let reactiveSheet = {
     sourceburp: "/cues/sourceburp.mp3",
     splash: "/cues/splash.mp3",
     success: "/cues/success.mp3",
+    onboarding1: "/cues/onboarding1.mp3",
+    onboarding2: "/cues/onboarding2.mp3",
+    onboarding3: "/cues/onboarding3.mp3",
+    onboarding4: "/cues/onboarding4.mp3",
+    onboarding5: "/cues/onboarding5.mp3",
+    onboarding6: "/cues/onboarding6.mp3",
 }
-
 
 // LOAD IN UI ELEMENTS
 let ambientLoaded = false;
 let reactiveLoaded = false;
-let ambientObject = new Ambient(ambientSheet);
+const ambientObject = new Ambient(ambientSheet);
 ambientObject.load(ambientSheet).then(() => {
     console.log("Ambient cues loaded: " + ambientObject);
     ambientLoaded = true;
 })
-let reactiveObject = new Reactive(reactiveSheet);
+const reactiveObject = new Reactive(reactiveSheet);
 reactiveObject.load(reactiveSheet).then(() => {
     console.log("Reactive cues loaded: " + reactiveObject);
     reactiveLoaded = true;
 })
+
+// CONTENT
+let threadQueue;
 const contentObject = new Content();
-
-
-// MAIN FLOW
-function main() { // to be called after log in authorised
-    // hide captcha
-    document.body.classList.add('authenticated');
-    // animate card to go to the left, bring up buttons
-    document.getElementById('main-card').classList.add('animateToLeft');
-
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            stream.getTracks().forEach(track => track.stop());
-            micStream = stream;
-            audioContext.resume(); // for chrome
-
-            reactiveObject.trigger("splash", () => {
-                // trigger loading loop
-                // console.log("callback from splash!");
-
-                reactiveObject.trigger("ready"); // this should actually be attached to the load function instead of the previous trigger function
-                // maybe with the loading loop
-            });
-
-            // check db for user account
-            // if not, onboardingFlow()
-            // if yes, loadUnseenFeed()
-                // if all seen, loadSeenFeed()
-                // *click* goToUserProfile()
-
-
-            // back press and hold back to home
-            // back press once to pause
-            // back press again to go back (SAVES PLACE)
-
-
-            loadFeed();
-        })
-        .catch(error => {
-            console.error('Error accessing microphone:', error);
-        });
-}
-
-
-
 
 // BUTTON EVENT LISTENERS
 // login button
 loginButton.addEventListener('click', submitPhoneNumber);
+setupButtons();
 
+
+// button map defines what each button does in each stage
+let buttonMap;
+
+
+// STAGING
+let currentStage;
+// STAGE BUTTON SHEET
+let stageButtonSheet = {}
+
+
+//  CHECK FOR PREVIOUS SIGN IN
+if (auth.currentUser) {
+    burpuid = auth.currentUser.uid;
+    console.log("User signed in successfully: " + burpuid);
+    loginPrompt.innerHTML = "WELCOME BACK";
+    loginInput.style.display = "none";
+    document.getElementById("login-message").style.display = "none";
+    loginButton.parentNode.replaceChild(verifyButton, loginButton);
+    verifyButton.style.width = "100";
+    verifyButton.addEventListener('click', () => {
+        toBootStage();
+    });
+} else console.log("no user logged in");
+
+
+// check db for user account
+// if not, onboardingFlow()
+// if yes, loadUnseenFeed()
+// if all seen, loadSeenFeed()
+// *click* goToUserProfile()
+
+
+// back press and hold back to home
+// back press once to pause
+// back press again to go back (SAVES PLACE)
+
+
+// ------------------------- HELPERS
+
+
+// STAGES
+async function toBootStage() {
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    document.body.classList.add('authenticated');
+    document.getElementById('main-card').classList.add('animateToLeft');
+    audioContext.resume(); // for chrome
+    reactiveObject.trigger("splash", async () => {
+        ambientObject.lowPass(true);
+        ambientObject.playOnce("loading", () => {
+            // ambientObject.stop();
+            if (profile.missing) {
+                toOnboardingStage(profile.missing);
+            } else {
+                toThreadStage();
+            }
+        })
+        // check if user has a profile setup
+        let profile = await dbGetUserProfile(burpuid);
+    });
+}
+
+async function toOnboardingStage(isMissing) {
+    console.log("in the onboarding stage");
+    buttonMap = {
+        recDown: () => {
+            ambientObject.stop();
+            reactiveObject.trigger("recordstart", () => {
+                console.log("recording now");
+                startRecording(() => {
+                    toOnboardingStage2();
+                });
+            })
+        },
+        recUp: () => {
+            // check if we're still in prerecord stage
+            if (isRecording) {
+                stopRecording();
+            } else if (reactiveObject.isPlaying) {
+                console.log("recording cancelled");
+                reactiveObject.interrupt();
+                ambientObject.start('profile');
+            }
+        },
+        playDown: () => {
+            reactiveObject.trigger("onboarding1");
+        },
+        playUp: () => { },
+        backDown: () => {
+            reactiveObject.interrupt();
+        },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    // do recording flow
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("profile");
+    reactiveObject.trigger("onboarding1");
+
+
+
+    // if (isMissing == "profile") {
+    //     await dbCreateUser(burpuid);
+    // } else {
+    //     dbUpdateUserBurp // DOESNT EXIST YET
+    // }
+}
+
+function toOnboardingStage2() {
+    console.log("in the onboarding 2 stage");
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("profile");
+    reactiveObject.trigger("onboarding2", () => {
+
+    });
+
+
+
+
+
+}
+
+
+function toThreadStage() {
+    console.log("in the thread stage");
+    // loadFeed();
+
+}
+
+function toProfileStage() {
+
+}
+
+
+// FIREBASE HELPERS
 function submitPhoneNumber() {
     const phoneNumber = loginInput.value;
     const appVerifier = window.recaptchaVerifier;
@@ -219,142 +360,94 @@ function submitPhoneNumber() {
 }
 
 function submitVerificationNumber(confirmationResult) {
-    console.log("verify button clicked");
+    // console.log("verify button clicked");
     const code = loginInput.value;
     confirmationResult.confirm(code).then(function (result) {
         var user = result.user;
         burpuid = user.uid;
-        console.log(user);
+        // console.log(user);
         console.log("User signed in successfully: " + burpuid);
-        main(); // commented out for dev
+        // main(); // commented out for dev
+        toBootStage();
     }).catch(function (error) {
         console.error("Error while verifying the code", error);
         document.getElementById("login-message").innerHTML = "Could not verify code, please try again.";
     });
 }
 
-// INTERFACE BUTTONS
-
-// play button
-// playButton.addEventListener('click', async () => {
-//     // reactiveObject.trigger('play');
-//     if (contentObject && !contentObject.isPlaying) {
-//         contentObject.play();
-//     }
-// });
-
-// // record button
-// ['mousedown', 'touchstart'].forEach(function (e) {
-//     recordButton.addEventListener(e, function () {
-//         reactiveObject.trigger("prerecord", () => {
-//             console.log("recording now");
-//             startRecording();
-//         })
-//     })
-// });
-
-// ['mouseup', 'touchend'].forEach(function (e) {
-//     recordButton.addEventListener(e, function () {
-//         // check if we're still in prerecord stage
-//         if (isRecording) {
-//             stopRecording();
-//         } else if (reactiveObject.isPlaying) {
-//             console.log("recording cancelled");
-//             reactiveObject.interrupt();
-//         }
-
-//     });
-// });
-
-// stop button
-// stopButton.addEventListener('click', () => {
-//     // reactiveObject.trigger('pause');
-//     if (contentObject.isPlaying) {
-//         contentObject.pause();
-//     }
-// })
-
-// jogwheel
-jogwheel.addEventListener('input', jogwheelMoved);
-jogwheel.addEventListener('change', jogwheelMoved);
+// INTERFACE BUTTON HELPERS
 
 function jogwheelMoved() {
-    // jogwheel value is 0 - 1.0
-    if (contentObject.isPlaying) {
-        contentObject.scrub(jogwheel.value);
-    }
+
+    buttonMap.jogMoved();
+    // // jogwheel value is 0 - 1.0
+    // if (contentObject.isPlaying) {
+    //     contentObject.scrub(jogwheel.value);
+    // }
 }
 
+function setupButtons() {
+    jogwheel.addEventListener('input', jogwheelMoved);
+    jogwheel.addEventListener('change', jogwheelMoved);
 
-// reset jogwheel when released
-['mouseup', 'touchend'].forEach(function (e) {
-    jogwheel.addEventListener(e, function () {
-        // console.log("mouse up");
-        jogwheel.value = 0.5;
-        if (contentObject.isPlaying) {
-            contentObject.scrub(jogwheel.value);
-        }
+    // reset jogwheel when released
+    ['mouseup', 'touchend'].forEach(function (e) {
+        jogwheel.addEventListener(e, function () {
+            // console.log("mouse up");
+            jogwheel.value = 0.5;
+            // if (contentObject.isPlaying) {
+            //     contentObject.scrub(jogwheel.value);
+            // }
+            buttonMap.jogUp();
+        });
     });
-});
 
-let recButtonDiv = document.getElementById("recButtonDiv");
-let playButtonDiv = document.getElementById("playButtonDiv");
-let stopButtonDiv = document.getElementById("stopButtonDiv");
+    let recButtonDiv = document.getElementById("recButtonDiv");
+    let playButtonDiv = document.getElementById("playButtonDiv");
+    let stopButtonDiv = document.getElementById("stopButtonDiv");
 
-// adding animations on click
-['mousedown', 'touchstart'].forEach(function (e) {
-    recButtonDiv.addEventListener(e, function () {
-        recordButton.classList.add('button-clicked');
-        reactiveObject.trigger("prerecord", () => {
-            console.log("recording now");
-            startRecording();
-        })
+    // adding animations on click
+    ['mousedown', 'touchstart'].forEach(function (e) {
+        recButtonDiv.addEventListener(e, function () {
+            recordButton.classList.add('button-clicked');
+            buttonMap.recDown();
+        });
+        playButtonDiv.addEventListener(e, function () {
+            playButton.classList.add('button-clicked');
+            buttonMap.playDown();
+        });
+        stopButtonDiv.addEventListener(e, function () {
+            stopButton.classList.add('button-clicked');
+            buttonMap.backDown();
+        });
     });
-    playButtonDiv.addEventListener(e, function () {
-        playButton.classList.add('button-clicked');
+
+    ['mouseup', 'touchend'].forEach(function (e) {
+        recButtonDiv.addEventListener(e, function () {
+            recordButton.classList.remove('button-clicked');
+            buttonMap.recUp();
+        });
+        playButtonDiv.addEventListener(e, function () {
+            playButton.classList.remove('button-clicked');
+            buttonMap.playUp();
+
+            // reactiveObject.trigger('play');
+            // if (contentObject && !contentObject.isPlaying) {
+            //     contentObject.play();
+            // }
+        });
+        stopButtonDiv.addEventListener(e, function () {
+            stopButton.classList.remove('button-clicked');
+            buttonMap.backUp();
+
+            // if (contentObject.isPlaying) {
+            //     contentObject.pause();
+            // }
+        });
     });
-    stopButtonDiv.addEventListener(e, function () {
-        stopButton.classList.add('button-clicked');
-    });
-});
+}
 
-['mouseup', 'touchend'].forEach(function (e) {
-    recButtonDiv.addEventListener(e, function () {
-        recordButton.classList.remove('button-clicked');
-        // check if we're still in prerecord stage
-        if (isRecording) {
-            stopRecording();
-        } else if (reactiveObject.isPlaying) {
-            console.log("recording cancelled");
-            reactiveObject.interrupt();
-        }
-    });
-    playButtonDiv.addEventListener(e, function () {
-        playButton.classList.remove('button-clicked');
-        // reactiveObject.trigger('play');
-        if (contentObject && !contentObject.isPlaying) {
-            contentObject.play();
-        }
-    });
-    stopButtonDiv.addEventListener(e, function () {
-        stopButton.classList.remove('button-clicked');
-        if (contentObject.isPlaying) {
-            contentObject.pause();
-        }
-    });
-});
-
-
-
-// HELPER FUNCTIONS
-
-const mockpaths = [
-    "mockaudio/burp5.aif",
-    "mockaudio/response6.aif",
-    "mockaudio/response3.aif",
-    "mockaudio/response5.aif"
-];
-
+// CONTENT HELPERS
 function loadFeed(callback) {
     getAllAudioRefs()
         .then((refArray) => { return getUrlsFromRefs(refArray) })
@@ -371,11 +464,11 @@ function loadFeed(callback) {
         });
 }
 
-let threadQueue;
+
 // thread >> post >> ref
-async function newLoadFeed(callback) { // working on this 7/4
+async function newLoadFeed(callback) { // not working yet
     try {
-        
+
         let threads = await dbGetUnseenThreads(burpuid); // returns an array of threads
         if (threads.length < 1) {
             throw new Error("no new threads");
@@ -529,13 +622,13 @@ async function getCdnURLFromRef(audioRef) {
 
 // // RECORDING HELPERS
 
-// Variables to store recording state and audio buffers
-let isRecording = false;
-let recordedChunks = [];
-
-function startRecording() {
+function startRecording(callback) {
     if (contentObject.isPlaying) {
         contentObject.pause();
+    }
+    if (ambientObject.isPlaying) {
+        console.log("stopping ambient");
+        ambientObject.stop();
     }
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then((stream) => {
@@ -553,11 +646,10 @@ function startRecording() {
                 console.log(recordedBlob);
                 console.log('Recorded audio Blob URL:', URL.createObjectURL(recordedBlob));
                 // Reset recording state and recordedChunks array
-                // upload to server
-                uploadBlob(recordedBlob);
-
                 isRecording = false;
                 recordedChunks = [];
+                pendingBlob = recordedBlob;
+                if (callback) callback();
             };
             // Start recording
             mediaRecorder.start();
@@ -569,7 +661,6 @@ function startRecording() {
 // Function to stop recording
 function stopRecording() {
     if (isRecording) {
-        reactiveObject.trigger('uploading');
         mediaRecorder.stop();
         micStream.getTracks().forEach(track => track.stop());
     }
@@ -600,162 +691,209 @@ function uploadBlob(audioBlob) {
 
 // DATABASE HELPERS
 // CREATE
-function dbCreateUser(uid, burpRef) {
-    fetch('/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            type: "user",
-            username: uid,
-            burpRef: burpRef,
-        }),
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.text();
-        })
-        .then(data => {
-            console.log('Success:', data);
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+async function dbCreateUser(uid, burpRef) {
+    try {
+        const response = await fetch('/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: "user",
+                username: uid,
+                burpRef: burpRef,
+            }),
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        const data = await response.text();
+        console.log('Success:', data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
-function dbCreateThread(uid, burpRef) {
-    fetch('/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            type: "thread",
-            threadAuthor: uid,
-            posts: [{
-                author: uid,
-                storageRef: burpRef,
-            }],
-        }),
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.text();
-        })
-        .then(data => {
-            console.log('Success:', data);
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+async function dbCreateThread(uid, burpRef) {
+    try {
+        const response = await fetch('/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: "thread",
+                threadAuthor: uid,
+                posts: [{
+                    author: uid,
+                    storageRef: burpRef,
+                }],
+            }),
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        const data = await response.text();
+        console.log('Success:', data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
 // READ
-function dbGetUnseenThreads(uid) { // Returns array
-    fetch('/thread/?' + new URLSearchParams({
-        type: "unseen-threads",
-        userID: uid,
-    }))
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.json().catch(() => response.text());
-        })
-        .then(data => {
-            if (typeof data === 'string') {
-                console.error('Failed to parse JSON, received string: ', data);
-            } else {
-                console.log('Success:', data);
-            }
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+async function dbGetUnseenThreads(uid) { // Returns array
+    try {
+        const response = await fetch('/thread/?' + new URLSearchParams({
+            type: "unseen-threads",
+            userID: uid,
+        }));
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        if (typeof data === 'string') {
+            console.error('Failed to parse JSON, received string: ', data);
+        } else {
+            console.log('Success:', data);
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
-function dbGetSeenThreads(uid) { // Returns array
-    fetch('/thread/?' + new URLSearchParams({
-        type: "seen-threads",
-        userID: uid,
-    }))
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.json().catch(() => response.text());
-        })
-        .then(data => {
-            if (typeof data === 'string') {
-                console.error('Failed to parse JSON, received string: ', data);
-            } else {
-                console.log('Success:', data);
-            }
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+async function dbGetSeenThreads(uid) { // Returns array
+    try {
+        const response = await fetch('/thread/?' + new URLSearchParams({
+            type: "seen-threads",
+            userID: uid,
+        }));
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        if (typeof data === 'string') {
+            console.error('Failed to parse JSON, received string: ', data);
+        } else {
+            console.log('Success:', data);
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
-function dbGetUserThreads(uid) {
-    fetch('/user/?' + new URLSearchParams({
-        userID: uid,
-    }))
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.json().catch(() => response.text());
-        })
-        .then(data => {
-            if (typeof data === 'string') {
-                console.error('Failed to parse JSON, received string: ', data);
-            } else {
-                console.log('Success:', data);
-            }
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+async function dbGetUserThreads(uid) {
+    try {
+        const response = await fetch('/user/?' + new URLSearchParams({
+            type: "user-threads",
+            userID: uid,
+        }));
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        if (typeof data === 'string') {
+            console.error('Failed to parse JSON, received string: ', data);
+        } else {
+            console.log('Success:', data);
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+async function dbGetUserProfile(uid) { // if no profile, will return "no profile"
+    try {
+        const response = await fetch('/user/?' + new URLSearchParams({
+            type: "profile",
+            userID: uid,
+        }));
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        console.log(data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
 
 // PUT
-function dbLogSeen(uid, threadId) {
-    fetch('/', {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            type: "log-seen",
-            userID: uid,
-            threadID: threadId,
-        }),
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.json().catch(() => response.text());
-        })
-        .then(data => {
-            console.log('Success:', data);
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+async function dbLogSeen(uid, threadId) {
+    try {
+        const response = await fetch('/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: "log-seen",
+                userID: uid,
+                threadID: threadId,
+            }),
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        console.log('Success:', data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
 function dbRespondToThread(uid, threadId, burpRef) {
@@ -787,4 +925,6 @@ function dbRespondToThread(uid, threadId, burpRef) {
             console.error('Error:', error);
         });
 }
+
+
 
