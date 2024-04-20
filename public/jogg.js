@@ -1,13 +1,3 @@
-// SET UP AUDIO CONTEXT
-// let audioContext;
-// try {
-//     let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-//     console.log(stream.getAudioTracks()[0].getSettings().sampleRate);
-//     audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: stream.getAudioTracks()[0].getSettings().sampleRate });
-//     stream.getTracks().forEach(track => track.stop());
-// } catch (error) {
-//     console.error('Error getting sample rate from microphone:', error);
-// }
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 export { audioContext };
 
@@ -113,7 +103,7 @@ export class Ambient {
 // Reactive objects play spontaneously as one shots
 export class Reactive {
 
-    constructor() { // accepts a json with names as keys and urls as values
+    constructor() {
         this.bufferList = {};
         this._isPlaying = false;
         this.wasInterrupted = false;
@@ -124,7 +114,7 @@ export class Reactive {
     }
 
 
-    async load(soundSheet) {
+    async load(soundSheet) { // accepts a json with names as keys and urls as values
         for (let [cue, url] of Object.entries(soundSheet)) {
             // console.log(`Cue: ${cue}, url: ${url}`);
             try {
@@ -141,6 +131,9 @@ export class Reactive {
     }
 
     trigger(soundName, callback) { // callback = function to trigger on end
+        if (this._isPlaying) {
+            this.interrupt();
+        }
         if (!this.source) {
             this.wasInterrupted = false;
             this.source = audioContext.createBufferSource();
@@ -161,10 +154,12 @@ export class Reactive {
     }
 
     interrupt() {
+        if (this.source) {
+            this.source.stop();
+            this.source = null;
+        }
         this._isPlaying = false;
         this.wasInterrupted = true;
-        this.source.stop();
-        this.source = null;
     }
 
 }
@@ -184,37 +179,30 @@ export class Content {
     }
 
     async loadContentFromUrls(audioUrlArray) { // accepts an array of child paths e.g. ["audio/burp5.aif", ...]
-        // console.log(audioUrlArray);
-        return fetch(audioUrlArray.shift())
-            .then(response => response.arrayBuffer())
-            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
-            .then(decodedData => {
-                // console.log("pushing buffer");
-                this.discreteBuffers.push(decodedData);
-            })
-            .catch(error => {
-                console.error('Error loading audio:', error);
-            })
-            .finally(() => {
-                // Check if all audio files have been loaded
-                if (audioUrlArray.length == 0) {
-                    console.log("all content cues loaded")
-                    // Merge the audio buffers
-                    const mergedContentBuffer = mergeBuffers(this.discreteBuffers);
-                    this.buffer = mergedContentBuffer;
-                    // contentSource.buffer = currentContentBuffer; // make the source when play is clicked
-                } else {
-                    this.loadContentFromUrls(audioUrlArray);
-                }
-            });
-
+        try {
+            const response = await fetch(audioUrlArray.shift());
+            const arrayBuffer = await response.arrayBuffer();
+            const decodedData = await audioContext.decodeAudioData(arrayBuffer);
+            this.discreteBuffers.push(decodedData);
+            // Check if all audio files have been loaded
+            if (audioUrlArray.length == 0) {
+                console.log("all content cues loaded")
+                // Merge the audio buffers
+                const mergedContentBuffer = mergeBuffers(this.discreteBuffers);
+                this.buffer = mergedContentBuffer;
+            } else {
+                await this.loadContentFromUrls(audioUrlArray);
+            }
+        } catch (error) {
+            console.error('Error loading audio:', error);
+        }
     }
 
     get isPlaying() { // true if is playing
         return this._isPlaying;
     }
 
-    play() {
+    play(callback) {
         if (!this.source) {
             this.wasPaused = false;
             this.source = audioContext.createBufferSource();
@@ -225,6 +213,7 @@ export class Content {
                 this.source = null;
                 if (!this.wasPaused) {
                     this.startOffset = 0;
+                    if (callback) callback();
                 }
             };
             this.source.start(0, this.startOffset % this.buffer.duration);

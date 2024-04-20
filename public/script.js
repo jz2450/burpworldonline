@@ -1,47 +1,11 @@
-
-// firebase check if someone is logged in already
-// written manual
-// info button
-// check if phone number is valid before going to captcha
-// implement sound when jogwheel past threshold to skip
-// implement an end of queue sound
-// implement loading sounds FIGURE OUT "LOADING"
-// sound for an empty feed?? paused??
-// how do you refresh?
-// notification when new burp uploaded
-// audio mic input problems
-// clean up microphone sound, too artifacty
-// synthesis, not audio files
-// animate joshjoshjosh logo to left
-// button labels keep shifting??
-// turn on and off voice cues
-// fix error throwing as success in db helpers
-// format errors from server endpoints
-// clickable threads
-// profiles should have all posts not just threads
-// tutorial flow
-// delete endpoint
-// jogg object not stopping when retrigg
-// super slow mo bug????
-// fix play retrig bug
-// log out
-// blank screen before auto login
-
-
-// RIGHT NOW vvv
-// develop ux flow
-// loadFeed from db
-// stop button should interrupt everything
-// sound not working mobile :/
-
 // JOGG.JS
 import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 
 // FIREBASE
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 // SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -70,8 +34,11 @@ window.recaptchaVerifier = new RecaptchaVerifier(auth, 'login-button', {
         console.log("reCAPTCHA solved, allow signInWithPhoneNumber");
     }
 });
+
+// LOGIN UI yes it's visual i'm sorry
 const loginPrompt = document.getElementById("login-prompt");
 const loginInput = document.getElementById("login-input");
+const loginMessage = document.getElementById("login-message");
 const loginButton = document.getElementById("login-button");
 const verifyButton = document.createElement('button');
 verifyButton.id = 'verify-button';
@@ -86,25 +53,70 @@ loginInput.addEventListener('keyup', function (event) {
     }
 });
 
+// + in the area code
+loginInput.addEventListener('input', addPlus);
+
+function addPlus(e) {
+    let target = e.target, position = target.selectionStart - 1;
+    // Remove non-digit characters
+    target.value = target.value.replace(/[^0-9]/g, '');
+    // Add '+' at the start
+    if (!target.value.startsWith('+')) {
+        target.value = '+' + target.value;
+    }
+}
+
 // BUTTON SETUP
 let jogwheel = document.getElementById('jogwheel');
 let stopButton = document.getElementById('stopButton');
 let playButton = document.getElementById('playButton');
 let recordButton = document.getElementById('recButton');
+let infoButton = document.getElementById('info-button2');
+
+// BUTTON EVENT LISTENERS
+// login button
+loginButton.addEventListener('click', submitPhoneNumber);
+setupButtons();
+
+// about page
+infoButton.addEventListener('click', () => {
+    if (document.body.classList.contains('about')) {
+        document.body.classList.remove('about');
+        infoButton.innerHTML = "<h2>ⓘ</h2>";
+        if (document.body.classList.contains('authenticated')) {
+            document.getElementById('main-card').classList.add('animateToLeft');
+        }
+    } else {
+        document.body.classList.add('about');
+        infoButton.innerHTML = "<h2>🔙</h2>";
+        if (document.body.classList.contains('authenticated')) {
+            document.getElementById('main-card').classList.remove('animateToLeft');
+        }
+    }
+
+});
+
+// button map defines what each button does in each stage
+let buttonMap;
+
+let jogwheelPrevVal;
+
 
 // RECORDING SETUP
 let mediaRecorder;
 let micStream;
 let isRecording = false;
 let recordedChunks = [];
-let pendingBlob;
+let pendingBlob, pendingBlobUrl;
 
 try {
     let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(track => track.stop());
+    // stream.getTracks().forEach(track => track.stop());
     micStream = stream;
 } catch (err) {
     console.log("error getting mic input");
+    loginPrompt.innerHTML = "Could not get mic input, please check your settings and refresh :)<br>";
+    throw new Error("Stopping script execution due to mic input error");
 }
 
 // MOCK AUDIO FOR DEVELOPMENT
@@ -117,6 +129,7 @@ const mockpaths = [
 
 // AMBIENT FILE NAMES
 let ambientSheet = {
+    idle: "/cues/idleloop.mp3",
     loading: "/cues/loadingloop.mp3",
     profile: "/cues/profileloop.mp3",
     thread: "/cues/threadloop.mp3",
@@ -147,36 +160,22 @@ let reactiveSheet = {
 // LOAD IN UI ELEMENTS
 let ambientLoaded = false;
 let reactiveLoaded = false;
-const ambientObject = new Ambient(ambientSheet);
+const ambientObject = new Ambient();
 ambientObject.load(ambientSheet).then(() => {
     console.log("Ambient cues loaded: " + ambientObject);
     ambientLoaded = true;
 })
-const reactiveObject = new Reactive(reactiveSheet);
+const reactiveObject = new Reactive();
 reactiveObject.load(reactiveSheet).then(() => {
     console.log("Reactive cues loaded: " + reactiveObject);
     reactiveLoaded = true;
 })
 
 // CONTENT
-let threadQueue;
+let currentThread;
+let threadQueue = [];
+let threadHistory = [];
 const contentObject = new Content();
-
-// BUTTON EVENT LISTENERS
-// login button
-loginButton.addEventListener('click', submitPhoneNumber);
-setupButtons();
-
-
-// button map defines what each button does in each stage
-let buttonMap;
-
-
-// STAGING
-let currentStage;
-// STAGE BUTTON SHEET
-let stageButtonSheet = {}
-
 
 //  CHECK FOR PREVIOUS SIGN IN
 if (auth.currentUser) {
@@ -184,25 +183,22 @@ if (auth.currentUser) {
     console.log("User signed in successfully: " + burpuid);
     loginPrompt.innerHTML = "WELCOME BACK";
     loginInput.style.display = "none";
-    document.getElementById("login-message").style.display = "none";
+    loginMessage.style.display = "block";
+    loginMessage.innerHTML = `Wasn't you? <button id="signOutButton" style="cursor:pointer;background-color:rgb(192, 192, 192);color:rgba(0, 0, 0, 0.847);border-radius:3px;">Sign out</button><br><br>`;
+    document.getElementById('signOutButton').addEventListener('click', fbSignOut);
     loginButton.parentNode.replaceChild(verifyButton, loginButton);
     verifyButton.style.width = "100";
     verifyButton.addEventListener('click', () => {
+        audioContext.resume();
         toBootStage();
     });
-} else console.log("no user logged in");
-
-
-// check db for user account
-// if not, onboardingFlow()
-// if yes, loadUnseenFeed()
-// if all seen, loadSeenFeed()
-// *click* goToUserProfile()
-
-
-// back press and hold back to home
-// back press once to pause
-// back press again to go back (SAVES PLACE)
+} else {
+    console.log("no user logged in");
+    loginPrompt.innerHTML = "ENTER YOUR PHONE NUMBER";
+    loginInput.style.display = "block";
+    loginMessage.style.display = "block";
+    loginButton.style.display = "block";
+}
 
 
 // ------------------------- HELPERS
@@ -225,30 +221,30 @@ async function toBootStage() {
     audioContext.resume(); // for chrome
     reactiveObject.trigger("splash", async () => {
         ambientObject.lowPass(true);
-        ambientObject.playOnce("loading", () => {
-            // ambientObject.stop();
-            if (profile.missing) {
-                toOnboardingStage(profile.missing);
-            } else {
-                toThreadStage();
-            }
-        })
-        // check if user has a profile setup
+        ambientObject.start("loading");
         let profile = await dbGetUserProfile(burpuid);
+        if (profile.missing) {
+            toOnboardingStage(profile.missing);
+        } else {
+            toIdleStage();
+        }
+        // check if user has a profile setup
+
     });
 }
 
+// ONBOARDING
 async function toOnboardingStage(isMissing) {
     console.log("in the onboarding stage");
     buttonMap = {
         recDown: () => {
             ambientObject.stop();
-            reactiveObject.trigger("recordstart", () => {
-                console.log("recording now");
-                startRecording(() => {
-                    toOnboardingStage2();
-                });
-            })
+            reactiveObject.interrupt();
+            console.log("recording now"); reactiveObject.trigger("recordstart");
+            startRecording(() => {
+                toOnboardingStage2(isMissing);
+            });
+
         },
         recUp: () => {
             // check if we're still in prerecord stage
@@ -260,14 +256,22 @@ async function toOnboardingStage(isMissing) {
                 ambientObject.start('profile');
             }
         },
-        playDown: () => {
-            reactiveObject.trigger("onboarding1");
+        playDown: () => { },
+        playUp: () => {
+            ambientObject.stop();
+            reactiveObject.trigger("select", () => {
+                ambientObject.start("profile");
+                reactiveObject.trigger("onboarding1");
+            })
         },
-        playUp: () => { },
-        backDown: () => {
+        backDown: () => { },
+        backUp: () => {
+            ambientObject.stop();
             reactiveObject.interrupt();
+            reactiveObject.trigger("back", () => {
+                ambientObject.start("profile");
+            })
         },
-        backUp: () => { },
         jogMoved: () => { },
         jogUp: () => { },
     };
@@ -276,17 +280,9 @@ async function toOnboardingStage(isMissing) {
     ambientObject.lowPass(true);
     ambientObject.start("profile");
     reactiveObject.trigger("onboarding1");
-
-
-
-    // if (isMissing == "profile") {
-    //     await dbCreateUser(burpuid);
-    // } else {
-    //     dbUpdateUserBurp // DOESNT EXIST YET
-    // }
 }
 
-function toOnboardingStage2() {
+function toOnboardingStage2(isMissing) {
     console.log("in the onboarding 2 stage");
     buttonMap = {
         recDown: () => { },
@@ -301,27 +297,253 @@ function toOnboardingStage2() {
     ambientObject.stop();
     ambientObject.lowPass(true);
     ambientObject.start("profile");
-    reactiveObject.trigger("onboarding2", () => {
-
+    reactiveObject.trigger("onboarding2", async () => {
+        // play blob
+        const response = await fetch(pendingBlobUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        let decodedData = await audioContext.decodeAudioData(arrayBuffer);
+        let preview = audioContext.createBufferSource();
+        preview.buffer = decodedData;
+        preview.connect(audioContext.destination);
+        preview.start(0);
+        preview.onended = () => {
+            reactiveObject.trigger("onboarding3");
+            buttonMap = {
+                recDown: () => { },
+                recUp: () => { },
+                playDown: () => { },
+                playUp: () => {
+                    ambientObject.stop();
+                    reactiveObject.trigger("select", () => {
+                        toOnboardingStage3(isMissing);
+                    })
+                },
+                backDown: () => { },
+                backUp: () => {
+                    ambientObject.stop();
+                    reactiveObject.trigger("back", () => {
+                        toOnboardingStage(isMissing);
+                    })
+                },
+                jogMoved: () => { },
+                jogUp: () => { },
+            };
+        }
     });
-
-
-
-
-
 }
 
+function toOnboardingStage3(isMissing) {
+    console.log("in the onboarding 3 stage");
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("loading");
+    reactiveObject.trigger("onboarding4", async () => {
+        // upload audio to server
+        let uploadPath = await uploadBlob(pendingBlob);
+        if (isMissing == "profile") {
+            try {
+                await dbCreateUser(burpuid, uploadPath);
+                ambientObject.stop();
+                ambientObject.lowPass(true);
+                ambientObject.start("profile");
+                reactiveObject.trigger("onboarding6", () => {
+                    toIdleStage();
+                });
+            } catch (error) {
+                console.log("error creating profile", error);
+            }
+        } else {
+            try {
+                await dbUpdateUserTag(burpuid, uploadPath);
+                ambientObject.stop();
+                ambientObject.lowPass(true);
+                ambientObject.start("profile");
+                reactiveObject.trigger("onboarding6", () => {
+                    toIdleStage();
+                });
+            } catch (error) {
+                console.log("error updating profile", error);
+            }
 
-function toThreadStage() {
+        }
+    });
+}
+
+async function toIdleStage() {
+    console.log("in the idle stage");
+    buttonMap = {
+        recDown: () => {
+            ambientObject.stop();
+            reactiveObject.interrupt();
+            console.log("recording now");
+            reactiveObject.trigger("recordstart", () => {
+                startRecording(async () => {
+                    // upload audio to server
+                    let uploadPath = await uploadBlob(pendingBlob);
+                    try {
+                        await dbCreateThread(burpuid, uploadPath);
+                        reactiveObject.trigger("success", () => {
+                            toIdleStage();
+                        });
+                    } catch (error) {
+                        reactiveObject.trigger("error");
+                        console.log("error creating thread", error);
+                    }
+                });
+            });
+        }, // create new thread
+        recUp: () => {
+            if (isRecording) {
+                stopRecording();
+            } else if (reactiveObject.isPlaying) {
+                console.log("recording cancelled");
+                reactiveObject.interrupt();
+                ambientObject.start('profile');
+            }
+        },
+        playDown: () => {
+            reactiveObject.trigger('select');
+        },
+        playUp: () => {
+            toThreadStage();
+        }, // to thread stage
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("idle");
+}
+
+async function toThreadStage() {
+    console.log("loading the thread stage");
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("loading");
+    await loadFeed();
     console.log("in the thread stage");
-    // loadFeed();
+    buttonMap = {
+        recDown: () => { // respond to thread not create FIX
+            ambientObject.stop();
+            reactiveObject.interrupt();
+            contentObject.pause();
+            console.log("recording now"); reactiveObject.trigger("recordstart", () => {
+                startRecording(async () => {
+                    // upload audio to server
+                    let uploadPath = await uploadBlob(pendingBlob);
+                    try {
+                        console.log(currentThread);
+                        await dbRespondToThread(burpuid, currentThread._id, uploadPath);
+                        reactiveObject.trigger("success");
+                        // take us back to current thread! not implemented yet
+                    } catch (error) {
+                        reactiveObject.trigger("error");
+                        console.log("error responding to thread", error);
+                    }
+                });
+            });
+        },
+        recUp: () => {
+            if (isRecording) {
+                stopRecording();
+            } else if (reactiveObject.isPlaying) {
+                console.log("recording cancelled");
+                reactiveObject.interrupt();
+                ambientObject.start('profile');
+                contentObject.play();
+            }
+        },
+        playDown: () => { reactiveObject.trigger('select'); },
+        playUp: () => {
+            // reactiveObject.trigger('select');
+            if (contentObject && !contentObject.isPlaying) {
+                contentObject.play();
+            }
+        },
+        backDown: () => {
+            reactiveObject.trigger('back');
+        },
+        backUp: () => {
+            if (contentObject.isPlaying) {
+                contentObject.pause();
+            } else {
+                currentThread = null;
+                toIdleStage();
+            }
+        },
+        jogMoved: () => {
+            // jogwheel value is 0 - 1.0
+            if (jogwheel.value < 0.75 && jogwheel.value > 0.25) {
+                if (contentObject.isPlaying) {
+                    contentObject.scrub(jogwheel.value);
+                }
+            } else if (jogwheel.value >= 0.75 && jogwheelPrevVal < 0.75) {
+                reactiveObject.trigger('nextopener');
+            } else if (jogwheel.value <= 0.25 && jogwheelPrevVal > 0.25) {
+                reactiveObject.trigger('prevopener');
+            }
+            jogwheelPrevVal = jogwheel.value;
+        },
+        jogUp: () => {
+            if (jogwheelPrevVal < 0.75 && jogwheelPrevVal > 0.25) {
+                if (contentObject.isPlaying) {
+                    contentObject.scrub(jogwheel.value);
+                }
+            } else if (jogwheelPrevVal >= 0.75) {
+                reactiveObject.trigger('nextcloser');
+                loadNextThread();
+            } else if (jogwheelPrevVal <= 0.25) {
+                reactiveObject.trigger('prevcloser');
+                loadPreviousThread();
+            }
+            jogwheelPrevVal = jogwheel.value;
+        },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("thread");
 
 }
 
 function toProfileStage() {
-
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("loading");
 }
 
+// <----------------------------------------------
 
 // FIREBASE HELPERS
 function submitPhoneNumber() {
@@ -337,9 +559,9 @@ function submitPhoneNumber() {
             // clear out field and reconfig button
             // loginButton.removeEventListener('click', submitPhoneNumber);
             loginPrompt.innerHTML = "ENTER VERIFICATION CODE";
-            loginInput.value = "123456"; // set to "" for production
+            loginInput.value = ""; // set to "" for production
             loginInput.placeholder = "Code";
-
+            loginInput.removeEventListener('input', addPlus);
             loginButton.parentNode.replaceChild(verifyButton, loginButton);
             // loginButton.innerHTML = "Log in";
             verifyButton.addEventListener('click', () => {
@@ -367,7 +589,7 @@ function submitVerificationNumber(confirmationResult) {
         burpuid = user.uid;
         // console.log(user);
         console.log("User signed in successfully: " + burpuid);
-        // main(); // commented out for dev
+        audioContext.resume();
         toBootStage();
     }).catch(function (error) {
         console.error("Error while verifying the code", error);
@@ -375,33 +597,18 @@ function submitVerificationNumber(confirmationResult) {
     });
 }
 
-// INTERFACE BUTTON HELPERS
-
-function jogwheelMoved() {
-
-    buttonMap.jogMoved();
-    // // jogwheel value is 0 - 1.0
-    // if (contentObject.isPlaying) {
-    //     contentObject.scrub(jogwheel.value);
-    // }
+function fbSignOut() {
+    auth.signOut().then(() => {
+        console.log('User signed out.');
+        location.reload();
+      }).catch((error) => {
+        console.error('Sign Out Error', error);
+      });
 }
 
+// INTERFACE BUTTON HELPERS
+
 function setupButtons() {
-    jogwheel.addEventListener('input', jogwheelMoved);
-    jogwheel.addEventListener('change', jogwheelMoved);
-
-    // reset jogwheel when released
-    ['mouseup', 'touchend'].forEach(function (e) {
-        jogwheel.addEventListener(e, function () {
-            // console.log("mouse up");
-            jogwheel.value = 0.5;
-            // if (contentObject.isPlaying) {
-            //     contentObject.scrub(jogwheel.value);
-            // }
-            buttonMap.jogUp();
-        });
-    });
-
     let recButtonDiv = document.getElementById("recButtonDiv");
     let playButtonDiv = document.getElementById("playButtonDiv");
     let stopButtonDiv = document.getElementById("stopButtonDiv");
@@ -430,106 +637,126 @@ function setupButtons() {
         playButtonDiv.addEventListener(e, function () {
             playButton.classList.remove('button-clicked');
             buttonMap.playUp();
-
-            // reactiveObject.trigger('play');
-            // if (contentObject && !contentObject.isPlaying) {
-            //     contentObject.play();
-            // }
         });
         stopButtonDiv.addEventListener(e, function () {
             stopButton.classList.remove('button-clicked');
             buttonMap.backUp();
+        });
+    });
 
-            // if (contentObject.isPlaying) {
-            //     contentObject.pause();
-            // }
+    // JOGWHEEL
+    ['input', 'change'].forEach(function (e) {
+        jogwheel.addEventListener(e, function () {
+            buttonMap.jogMoved();
+        });
+    });
+
+    // reset jogwheel when released
+    ['mouseup', 'touchend'].forEach(function (e) {
+        jogwheel.addEventListener(e, function () {
+            jogwheel.value = 0.5;
+            buttonMap.jogUp();
         });
     });
 }
 
 // CONTENT HELPERS
-function loadFeed(callback) {
-    getAllAudioRefs()
-        .then((refArray) => { return getUrlsFromRefs(refArray) })
-        .then((urls) => {
-            contentObject.reset();
-            contentObject.loadContentFromUrls(urls);
-        })
-        .then(() => {
-            // console.log(contentObject);
-            if (callback) callback();
-        })
-        .catch(error => {
-            console.error('Error loading audio:', error);
-        });
-}
 
-
-// thread >> post >> ref
-async function newLoadFeed(callback) { // not working yet
+async function loadFeed(callback) { // gets all unseen threads and preps the first one for playback
     try {
-
-        let threads = await dbGetUnseenThreads(burpuid); // returns an array of threads
-        if (threads.length < 1) {
-            throw new Error("no new threads");
+        threadHistory = [];
+        currentThread = null;
+        threadQueue = await dbGetUnseenThreads(burpuid); // returns an array of threads into global variable
+        if (!threadQueue || threadQueue.length < 1) {
+            console.log("no new threads");
+            loadSeenFeed();
         } else {
-            console.log(threads);
-            threadQueue = threads;
-            let postArray = [...threadQueue.shift().posts];
-            let storageRefs = postArray.map(post => post.storageRef);
-            let urls = await getUrlsFromRefs(storageRefs);
-            contentObject.reset();
-            contentObject.loadContentFromUrls(urls);
-            if (callback) callback();
-        }
-    } catch (error) {
-        console.error('Error loading audio:', error);
-    }
-
-}
-
-async function loadNextThread(callback) {
-    // play reactive cue for next thread
-    // play loading ambient cue
-    try {
-        if (threadQueue.length < 1) {
-            throw new Error("no more threads");
-        } else {
-            let postArray = [...threadQueue.shift().posts];
-            let storageRefs = postArray.map(post => post.storageRef);
-            let urls = await getUrlsFromRefs(storageRefs);
-            contentObject.reset();
-            contentObject.loadContentFromUrls(urls);
-            if (callback) callback();
+            console.log("threads to be loaded:", threadQueue);
+            await loadNextThread();
         }
     } catch (error) {
         console.error('Error loading audio:', error);
     }
 }
 
-async function getPageOfAudioRefs() {
-    // Create a reference under which you want to list
-    const listRef = ref(storage, 'audio');
-    const firstPage = await list(listRef, { maxResults: 20 });
-    // console.log(firstPage.items);
-    return firstPage.items;
-
-    // Fetch the second page if there are more elements.
-    // if (firstPage.nextPageToken) {
-    //   const secondPage = await list(listRef, {
-    //     maxResults: 100,
-    //     pageToken: firstPage.nextPageToken,
-    //   });
-    //   // processItems(secondPage.items)
-    //   // processPrefixes(secondPage.prefixes)
-    // }
+async function loadSeenFeed() {
+    console.log('loading seen threads, since you know every fucking thing');
+    try {
+        threadHistory = [];
+        currentThread = null;
+        threadQueue = await dbGetSeenThreads(burpuid); // returns an array of threads into global variable
+        if (!threadQueue || threadQueue.length < 1) {
+            console.log("no seen threads");
+        } else {
+            console.log("threads to be loaded:", threadQueue);
+            await loadNextThread();
+        }
+    } catch (error) {
+        console.error('Error loading audio:', error);
+    }
 }
 
-async function getAllAudioRefs() {
-    const listRef = ref(storage, 'audio');
-    const res = await listAll(listRef);
-    // console.log(res.items);
-    return res.items;
+async function logThreadView(thread) {
+    try {
+        if (thread) {
+            await dbLogSeen(burpuid, thread._id);
+            console.log("logged thread as seen");
+        }
+    } catch (error) {
+        console.error("error logging this thread as seen: ", error)
+    }
+}
+
+async function loadNextThread() {
+    try {
+        if (!threadQueue || threadQueue.length < 1) {
+            console.log("no more new threads");
+            reactiveObject.trigger("error");
+            return null;
+        } else {
+            if (currentThread) threadHistory.push(currentThread);
+            currentThread = threadQueue.shift();
+            console.log("current thread: ", currentThread);
+            console.log("thread queue: ", threadQueue);
+            console.log("thread history: ", threadHistory);
+            let posts = currentThread.posts;
+            let storagePaths = posts.map(post => post.storagePath);
+            console.log(storagePaths);
+            let urls = await getUrlsFromPaths(storagePaths);
+            contentObject.reset();
+            await contentObject.loadContentFromUrls(urls);
+            contentObject.play();
+            logThreadView(currentThread);
+        }
+    } catch (error) {
+        console.error('error loading next thread:', error);
+    }
+}
+
+async function loadPreviousThread() {
+    try {
+        if (threadHistory.length < 1) {
+            console.log("reached start of thread queue");
+            reactiveObject.trigger("error");
+            return null;
+        } else {
+            if (currentThread) threadQueue.unshift(currentThread);
+            currentThread = threadHistory.pop();
+            console.log("current thread: ", currentThread);
+            console.log("thread queue: ", threadQueue);
+            console.log("thread history: ", threadHistory);
+            let posts = currentThread.posts;
+            let storagePaths = posts.map(post => post.storagePath);
+            console.log(storagePaths);
+            let urls = await getUrlsFromPaths(storagePaths);
+            contentObject.reset();
+            await contentObject.loadContentFromUrls(urls);
+            contentObject.play();
+            logThreadView(currentThread);
+        }
+    } catch (error) {
+        console.error('error loading next thread:', error);
+    }
 }
 
 async function getUrlsFromPaths(sourcePathArray) {
@@ -546,19 +773,7 @@ async function getUrlsFromPaths(sourcePathArray) {
     }
 }
 
-async function getUrlsFromRefs(refArray) {
-    let urls = [];
-    refArray.forEach((r) => {
-        urls.push(getCdnURLFromRef(r));
-    });
-    try {
-        const results = await Promise.all(urls);
-        console.log("All urls gotten successfully");
-        return results;
-    } catch (error) {
-        console.error("Error processing items:", error);
-    }
-}
+
 
 async function getCdnURL(path) {
     return new Promise(resolve => {
@@ -567,58 +782,64 @@ async function getCdnURL(path) {
                 resolve(url);
             })
             .catch((error) => {
-                // A full list of error codes is available at
-                // https://firebase.google.com/docs/storage/web/handle-errors
                 switch (error.code) {
                     case 'storage/object-not-found':
-                        // File doesn't exist
                         break;
                     case 'storage/unauthorized':
-                        // User doesn't have permission to access the object
                         break;
                     case 'storage/canceled':
-                        // User canceled the upload
                         break;
-
-                    // ...
-
                     case 'storage/unknown':
-                        // Unknown error occurred, inspect the server response
                         break;
                 }
             });
     })
 }
 
-async function getCdnURLFromRef(audioRef) {
-    return new Promise(resolve => {
-        getDownloadURL(audioRef)
-            .then((url) => {
-                resolve(url);
-            })
-            .catch((error) => {
-                // A full list of error codes is available at
-                // https://firebase.google.com/docs/storage/web/handle-errors
-                switch (error.code) {
-                    case 'storage/object-not-found':
-                        // File doesn't exist
-                        break;
-                    case 'storage/unauthorized':
-                        // User doesn't have permission to access the object
-                        break;
-                    case 'storage/canceled':
-                        // User canceled the upload
-                        break;
-
-                    // ...
-
-                    case 'storage/unknown':
-                        // Unknown error occurred, inspect the server response
-                        break;
-                }
-            });
-    })
-}
+// // legacy from dev
+// async function getAllAudioRefs() {
+//     const listRef = ref(storage, 'audio');
+//     const res = await listAll(listRef);
+//     // console.log(res.items);
+//     return res.items;
+// }
+// async function getUrlsFromRefs(refArray) {
+//     console.log(refArray);
+//     let urls = [];
+//     refArray.forEach((r) => {
+//         urls.push(getCdnURLFromRef(r));
+//     });
+//     try {
+//         const results = await Promise.all(urls);
+//         console.log("All urls gotten successfully");
+//         console.log(results);
+//         return results;
+//         // console.log(urls);
+//         // return urls;
+//     } catch (error) {
+//         console.error("Error processing items:", error);
+//     }
+// }
+// async function getCdnURLFromRef(audioRef) {
+//     return new Promise(resolve => {
+//         getDownloadURL(audioRef)
+//             .then((url) => {
+//                 resolve(url);
+//             })
+//             .catch((error) => {
+//                 switch (error.code) {
+//                     case 'storage/object-not-found':
+//                         break;
+//                     case 'storage/unauthorized':
+//                         break;
+//                     case 'storage/canceled':
+//                         break;
+//                     case 'storage/unknown':
+//                         break;
+//                 }
+//             });
+//     })
+// }
 
 // // RECORDING HELPERS
 
@@ -630,68 +851,59 @@ function startRecording(callback) {
         console.log("stopping ambient");
         ambientObject.stop();
     }
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then((stream) => {
-            micStream = stream;
-            mediaRecorder = new MediaRecorder(micStream);
-            mediaRecorder.ondataavailable = event => {
-                recordedChunks.push(event.data);
-            };
 
-            // Event handler for when recording stops
-            mediaRecorder.onstop = () => {
-                // Create a Blob from the recorded chunks
-                const recordedBlob = new Blob(recordedChunks, { type: 'audio/wav' });
-                // For demonstration, let's just log the Blob URL
-                console.log(recordedBlob);
-                console.log('Recorded audio Blob URL:', URL.createObjectURL(recordedBlob));
-                // Reset recording state and recordedChunks array
-                isRecording = false;
-                recordedChunks = [];
-                pendingBlob = recordedBlob;
-                if (callback) callback();
-            };
-            // Start recording
-            mediaRecorder.start();
-            // Update recording state
-            isRecording = true;
-        })
+    mediaRecorder = new MediaRecorder(micStream);
+    mediaRecorder.ondataavailable = event => {
+        recordedChunks.push(event.data);
+    };
+
+    // Event handler for when recording stops
+    mediaRecorder.onstop = () => {
+        // Create a Blob from the recorded chunks
+        const recordedBlob = new Blob(recordedChunks, { type: 'audio/wav' });
+        // For demonstration, let's just log the Blob URL
+        console.log(recordedBlob);
+        console.log('Recorded audio Blob URL:', URL.createObjectURL(recordedBlob));
+        // Reset recording state and recordedChunks array
+        isRecording = false;
+        recordedChunks = [];
+        pendingBlob = recordedBlob;
+        pendingBlobUrl = URL.createObjectURL(recordedBlob);
+        if (callback) callback();
+    };
+    // Start recording
+    mediaRecorder.start();
+    // Update recording state
+    isRecording = true;
 }
 
 // Function to stop recording
 function stopRecording() {
     if (isRecording) {
         mediaRecorder.stop();
-        micStream.getTracks().forEach(track => track.stop());
+        // micStream.getTracks().forEach(track => track.stop());
     }
 }
 
 // upload audio
-function uploadBlob(audioBlob) {
-    const uploadref = ref(storage, '/audio/' + burpuid + "/" + Date.now() + '.wav');
-    uploadBytes(uploadref, audioBlob)
-        .then((snapshot) => {
-            console.log('Uploaded a blob or file!');
-            // adding to db
-            dbCreateThread(burpuid, uploadref);
-            // reload feed
-            console.log("reloading feed");
-            loadFeed(() => {
-                reactiveObject.interrupt();
-                reactiveObject.trigger('ready');
-            })
-        })
-        .catch(error => {
-            reactiveObject.trigger("error");
-            console.log("error uploading audio: " + error);
-        });
+async function uploadBlob(audioBlob) {
+    try {
+        const uploadPath = '/audio/' + burpuid + "/" + Date.now() + '.wav';
+        const uploadref = ref(storage, uploadPath);
+        await uploadBytes(uploadref, audioBlob);
+        console.log('Uploaded a blob or file!');
+        return uploadPath;
+    } catch (error) {
+        console.log("error uploading audio: " + error);
+        reactiveObject.trigger("error");
+    }
 }
 
 // END OF RECORDING HELPERS
 
 // DATABASE HELPERS
 // CREATE
-async function dbCreateUser(uid, burpRef) {
+async function dbCreateUser(uid, burpPath) {
     try {
         const response = await fetch('/', {
             method: 'POST',
@@ -700,8 +912,8 @@ async function dbCreateUser(uid, burpRef) {
             },
             body: JSON.stringify({
                 type: "user",
-                username: uid,
-                burpRef: burpRef,
+                userID: uid,
+                tagPath: burpPath,
             }),
         });
 
@@ -717,7 +929,7 @@ async function dbCreateUser(uid, burpRef) {
     }
 }
 
-async function dbCreateThread(uid, burpRef) {
+async function dbCreateThread(uid, burpPath) {
     try {
         const response = await fetch('/', {
             method: 'POST',
@@ -729,7 +941,7 @@ async function dbCreateThread(uid, burpRef) {
                 threadAuthor: uid,
                 posts: [{
                     author: uid,
-                    storageRef: burpRef,
+                    storagePath: burpPath,
                 }],
             }),
         });
@@ -774,6 +986,7 @@ async function dbGetUnseenThreads(uid) { // Returns array
         return data;
     } catch (error) {
         console.error('Error:', error);
+        return null;
     }
 }
 
@@ -804,6 +1017,7 @@ async function dbGetSeenThreads(uid) { // Returns array
         return data;
     } catch (error) {
         console.error('Error:', error);
+        return null;
     }
 }
 
@@ -834,6 +1048,7 @@ async function dbGetUserThreads(uid) {
         return data;
     } catch (error) {
         console.error('Error:', error);
+        return null;
     }
 }
 
@@ -859,6 +1074,7 @@ async function dbGetUserProfile(uid) { // if no profile, will return "no profile
         return data;
     } catch (error) {
         console.error('Error:', error);
+        return null;
     }
 }
 
@@ -896,35 +1112,60 @@ async function dbLogSeen(uid, threadId) {
     }
 }
 
-function dbRespondToThread(uid, threadId, burpRef) {
-    fetch('/', {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            type: "new-response",
-            threadID: threadId,
-            post: {
-                author: uid,
-                storageRef: burpRef,
+async function dbRespondToThread(uid, threadId, burpPath) {
+    try {
+        const response = await fetch('/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
             },
-        }),
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error: ${response.text}`);
-            }
-            return response.json().catch(() => response.text());
-        })
-        .then(data => {
-            console.log('Success:', data);
-            return data;
-        })
-        .catch((error) => {
-            console.error('Error:', error);
+            body: JSON.stringify({
+                type: "new-response",
+                threadID: threadId,
+                post: {
+                    author: uid,
+                    storagePath: burpPath,
+                },
+            }),
         });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        const data = await response.json().catch(() => response.text());
+        console.log('Success:', data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+    }
 }
 
+async function dbUpdateUserTag(uid, burpPath) {
+    try {
+        const response = await fetch('/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                type: "update-user-tag",
+                userID: uid,
+                tagPath: burpPath,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        const data = await response.json().catch(() => response.text());
+        console.log('Success:', data);
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+        return null;
+    }
+}
 
 

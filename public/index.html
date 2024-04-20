@@ -3,7 +3,10 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="apple-touch-icon" sizes="180x180" href="./images/favicon.png">
+  <link rel="shortcut icon" href="./images/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="./images/favicon.ico" type="image/x-icon">
   <script type="module" src="./jogg.js"></script>
   <link rel="stylesheet" href="styles/style.css">
   <title>Burp World Online</title>
@@ -31,6 +34,29 @@
       </div>
     </div>
     <div id="main-card">
+      <div id="aboutpage">
+        <img src="./images/control-help.png"
+          alt="a graphic showing what the buttons do, a record button, a play button, a back button, and a jogwheel"
+          width="230px">
+        <br>
+        <p>Burp World Online is organised in stages:<br>
+          <b><i>Standby</i></b> → <b><i>Threads</i></b> → <b><i>Profiles</i></b><br>
+          <br>
+          Recording in <b><i>Standby</i></b> creates a new <b><i>Thread</i></b>.<br>
+          Recording while a <b><i>Thread</i></b> plays adds to the <b><i>Thread</i></b>.<br>
+        </p>
+        <br>
+        <hr style="margin: 0 0 10px 0;border:none;height:1px;background-color:black">
+        <p>
+          <b>Burp World Online</b> is an online social space for burpers and burp connoisseurs alike.<br>
+          <br>
+          This app is designed to be an exploration of non-visual user interfaces using sound to navigate, highlighting
+          the rich sonic spectrum of the unjustly belittled belch.<br>
+          <br>
+          This is Josh Josh Josh’s ITP Thesis Project.<br>
+          <a href="https://github.com/jz2450/burpworldonline" target="_blank">→ Read more on Github</a>
+        </p>
+      </div>
       <div id="button-label-area">
         <div id="rec-label">Rec</div>
         <div id="play-label">Play</div>
@@ -41,7 +67,7 @@
         <a href="/" id="logo">
           <img src="images/bwologo.svg" alt="a logo consisting of a globe doing a little burp" height="40p">
         </a>
-        <p id="version-number">dev ver 2.0</p>
+        <p id="version-number">beta ver 1.0</p>
       </div>
       <!-- <hr style="margin: 0 20px;"> -->
       <div style="display:flex;flex-direction:row;justify-content:left;">
@@ -54,13 +80,14 @@
           </div>
         </div>
         <div id="login">
-          <label for="login-input" id="login-prompt" style="margin: 0 0 10px 0;">ENTER YOUR PHONE NUMBER</label>
-          <input type="tel" name="login-input" id="login-input" placeholder="+13475551234" style="width: 220px;"
-            value="+15555555555">
+          
+          <h2><label for="login-input" id="login-prompt" style="margin: 0 0 10px 0;">LOADING...</label></h2><br>
+          <input type="tel" name="login-input" id="login-input" placeholder="+13475551234" style="width: 220px;display:none;"
+            value="">
           <hr style="margin: 0 0 10px 0;border:none;height:1px;background-color:#D90D0D">
-          <p id="login-message" style="margin: 0 0 10px 0;">You will receive an SMS message for verification, standard
+          <p id="login-message" style="margin: 0 0 10px 0;display:none;">You will receive an SMS message for verification, standard
             rates apply.</p>
-          <button id="login-button" class="login-buttons">Next</button>
+          <button id="login-button" class="login-buttons" style="display:none;">Next</button>
         </div>
       </div>
     </div>

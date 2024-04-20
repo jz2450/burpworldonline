@@ -4,7 +4,15 @@
 
 [burpworld.online](https://burpworld.online)
 
+Burp World Online is an online social space for burpers and burp connoisseurs alike.
+
+This app is designed to be an exploration of non-visual user interfaces using sound to navigate, highlighting the rich sonic spectrum of the unjustly belittled belch.
+
 Burp World Online is an exploration of sound design as interface design. By reimagining the online social space as one that is free of the distraction of screens and visual social biases, it forges a new way of interacting with the computer and each other through our hands, voice, and ears.
+
+No longer will the chronically gassy be shamed into silence, to suffer a bloated tummy all alone!
+
+This is Josh’s ITP Thesis Project
 
 ![Burp World Online Cover Image](./doc/images/cover-image.png)
 

@@ -66,7 +66,7 @@ mongoose.connect(url);
 const Schema = mongoose.Schema;
 const userSchema = new Schema({
   userID: String,
-  userBurpRef: Object,
+  userTagPath: String,
   seenThreadIds: [],
 })
 const userModel = mongoose.model('userModel', userSchema);
@@ -84,8 +84,8 @@ app.post("/", async (req, res) => {
     // check if it's new user or new post
     if (req.body.type == "user") {
       const newUserDoc = new userModel({
-        userID: req.body.username,
-        userBurpRef: req.body.burpRef,
+        userID: req.body.userID,
+        userTagPath: req.body.tagPath,
         seenThreadIds: [],
       });
       newUserDoc.save();
@@ -116,17 +116,19 @@ app.get("/thread", async (req, res) => {
       const userDoc = await userModel.findOne({
         userID: req.query.userID
       });
-      if (!userDoc) throw new Error("user not found");
-      console.log(userDoc);
-      const seenList = userDoc.seenThreadIds;
+      if (!userDoc) {
+        res.status(404).send("user not found");
+      }
+      const seenList = userDoc.seenThreadIds.map(id => new mongoose.Types.ObjectId(id));
+      // const seenList = userDoc.seenThreadIds;
+      console.log(seenList);
       // Find threads that the user has not seen
       const threadDocs = await threadModel.aggregate([
         { $match: { _id: { $nin: seenList } } },
-
       ]);
       console.log(threadDocs);
       if (threadDocs.length < 1) {
-        throw new Error("No unseen threads");
+        res.status(404).send("No unseen threads");
       } else {
         res.status(200).send(threadDocs);
       }
@@ -135,16 +137,18 @@ app.get("/thread", async (req, res) => {
       const userDoc = await userModel.findOne({
         userID: req.query.userID
       });
-      if (!userDoc) throw new Error("user not found");
+      if (!userDoc) {
+        res.status(404).send("user not found");
+      }
       console.log(userDoc);
-      const seenList = userDoc.seenThreadIds;
+      const seenList = userDoc.seenThreadIds.map(id => new mongoose.Types.ObjectId(id));
       // Find threads that the user has not seen
       const threadDocs = await threadModel.aggregate([
         { $match: { _id: { $in: seenList } } },
       ]);
       console.log(threadDocs);
       if (threadDocs.length < 1) {
-        throw new Error("No unseen threads");
+        res.status(404).send("No seen threads");
       } else {
         res.status(200).send(threadDocs);
       }
@@ -160,12 +164,13 @@ app.get("/user", async (req, res) => {
   try {
     if (req.query.type == "user-threads") {
       // Find threads that the user created
+      // TO ADD: profile tags play first
       const threadDocs = await threadModel.find({
         threadAuthor: req.query.userID
       });
       console.log(threadDocs);
       if (threadDocs.length < 1) {
-        throw new Error("No threads from this user");
+        res.status(404).send("No threads from this user");
       } else {
         res.status(200).send(threadDocs);
       }
@@ -176,7 +181,7 @@ app.get("/user", async (req, res) => {
       if (!profile) {
         res.status(200).send({missing: "profile"});
       } else {
-        if (!profile.userBurpRef) {
+        if (!profile.userTagPath) {
           res.status(200).send({missing: "burp"});
         } else {
           res.status(200).send(profile);
@@ -199,7 +204,7 @@ app.put("/", async (req, res) => {
       // Add this thread to seen list 
       const updatedUserDoc = await userModel.findOneAndUpdate(
         { userID: req.body.userID },
-        { $push: { seenThreadIds: req.body.threadID } },
+        { $addToSet: { seenThreadIds: req.body.threadID } },
         { new: true, useFindAndModify: false },
       );
       console.log(updatedUserDoc);
@@ -207,12 +212,21 @@ app.put("/", async (req, res) => {
     } else if (req.body.type == "new-response") {
       // contribute to thread
       const updatedThreadDoc = await threadModel.findOneAndUpdate(
-        { _id: req.body.threadID },
+        { _id: new mongoose.Types.ObjectId(req.body.threadID) },
         { $push: { posts: req.body.post } },
         { new: true, useFindAndModify: false },
       );
       console.log(updatedThreadDoc)
       res.status(200).send(updatedThreadDoc)
+    } else if (req.body.type == "update-user-tag") {
+      // contribute to thread
+      const updatedUserDoc = await userModel.findOneAndUpdate(
+        { userID: req.body.userID },
+        { $set: { userBurpPath: req.body.tagPath } },
+        { new: true, useFindAndModify: false },
+      );
+      console.log(updatedUserDoc)
+      res.status(200).send(updatedUserDoc)
     }
   } catch (err) {
     console.error("error while making changes: " + err);

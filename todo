@@ -1,0 +1,63 @@
+RIGHT NOW
+- arrange unseen(all threads?) from newest to oldest
+- no lowpass when paused??
+- profile stage
+    - clickable threads
+    - profiles should have all posts not just threads
+
+BUGS
+- button labels keep shifting??
+- super slow mo bug???? AIRPODS
+- mouse up when not on button error
+
+NECESSITIES
+- what happens after a response is made to a thread? return to same thread, in same thread order
+- how do you refresh?
+- format errors from server endpoints
+- delete endpoint
+- create wiki
+
+
+WOULD BE NICE
+- written manual
+- notification when new burp uploaded
+- clean up microphone sound, too artifacty
+- synthesis, not audio files
+- animate joshjoshjosh logo to left
+- turn on and off voice cues
+- tutorial flow
+- allow mic to be stopped on mobile
+- transitions + crossfades
+- different ambient music for Seen thread, new vs old
+- cue to show how long a thread is
+
+COMPLETED
+- firebase check if someone is logged in already
+- jogg object not stopping when retrigg
+- implement loading sounds FIGURE OUT "LOADING"
+- fix play retrig bug
+- loadFeed from db
+- audio mic input problems when on and off
+- fix error throwing as success in db helpers
+- log thread view
+- implement an end of queue sound (now "next thread")
+- favicon!
+- load seen view -> mongoose issue! check server.js for unseen-threads
+- respond to thread -> prob same issue as above
+- disable double tap to zoom
+- implement sound when jogwheel past threshold to skip
+- stop auto nexting, use jogwheel to skip
+    - back thread next thread is fucked
+- fix scrubbing, going in reverse, make it all speed up???
+- info button
+- blank loading screen before auto login
+- jogg.js documentation
+- log out
+- allow someone to switch users
+- handle mic rejection from user
+- check if phone number is valid before going to captcha
+
+???
+- back press and hold back to home
+- back press once to pause
+- back press again to go back (SAVES PLACE)

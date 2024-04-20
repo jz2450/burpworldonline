@@ -3,6 +3,20 @@
   --secondary-color: #ff7e5f;
 }
 
+* {
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
+  touch-action: none;
+}
+
+a {
+  -webkit-user-select: text; /* Safari */
+  -ms-user-select: text; /* IE 10 and IE 11 */
+  user-select: text; /* Standard syntax */
+  touch-action: auto;
+}
+
 html, body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: var(--bg-color);
@@ -10,10 +24,6 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
 }
 
 h1 {
@@ -78,6 +88,8 @@ p {
   box-shadow: 0px 14px 18px rgba(0, 0, 0, 0.25);
   z-index: 10;
   position: relative;
+  transition: transform 1s;
+  transform: translateX(0);
   /* added for dev */
   /* display:none; */
 }
@@ -96,6 +108,12 @@ p {
 body.authenticated #button-label-area {
   opacity: 1;
   visibility: visible;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+body.about #button-label-area {
+  opacity: 0;
+  visibility: hidden;
   transition: opacity 0.5s, visibility 0.5s;
 }
 
@@ -121,7 +139,19 @@ body.authenticated #button-label-area {
   align-items: flex-end;
 }
 
+#version-number {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
 body.authenticated #version-number {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+body.about #version-number {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.5s, visibility 0.5s;
@@ -151,17 +181,54 @@ body.authenticated #version-number {
 }
 
 #login {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   /* align-items: center; */
   padding: 10px 20px 0 10px;
   max-width: 100%;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s, visibility 0.5s;
 }
 
 body.authenticated #login {
   opacity: 0;
   visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+body.about #login {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+#aboutpage {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* align-items: center; */
+  padding: 20px;
+  margin-left: 75px;
+  max-width: 100%;
+  font-size: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+body.authenticated #aboutpage {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+body.about #aboutpage {
+  opacity: 1;
+  visibility: visible;
   transition: opacity 0.5s, visibility 0.5s;
 }
 
@@ -204,15 +271,10 @@ body.authenticated .grecaptcha-badge {
   }
 }
 
-.animateToLeft {
-  animation: moveToLeft 1s forwards;
+#main-card.animateToLeft {
+  /* animation: moveToLeft 1s forwards; */
+  transform: translateX(-53%);
 }
-
-
-
-
-
-
 
 
 
