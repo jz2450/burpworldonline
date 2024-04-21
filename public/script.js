@@ -221,14 +221,17 @@ async function toBootStage() {
     reactiveObject.trigger("splash", async () => {
         ambientObject.lowPass(true);
         ambientObject.start("loading");
-        let profile = await dbGetUserProfile(burpuid);
-        if (profile.missing) {
-            toOnboardingStage(profile.missing);
-        } else {
-            toIdleStage();
+        try {
+            let profile = await dbGetUserProfile(burpuid);
+            if (profile.missing) {
+                toOnboardingStage(profile.missing);
+            } else {
+                toIdleStage();
+            }
+            // check if user has a profile setup
+        } catch (error) {
+            console.error("error getting profile ",error);
         }
-        // check if user has a profile setup
-
     });
 }
 
@@ -255,21 +258,27 @@ async function toOnboardingStage(isMissing) {
                 ambientObject.start('profile');
             }
         },
-        playDown: () => { },
-        playUp: () => {
+        playDown: () => {
+            reactiveObject.interrupt();
+            console.log(reactiveObject.isPlaying);
+            reactiveObject.trigger("select");
             ambientObject.stop();
-            reactiveObject.trigger("select", () => {
-                ambientObject.start("profile");
-                reactiveObject.trigger("onboarding1");
-            })
         },
-        backDown: () => { },
-        backUp: () => {
+        playUp: () => {
+            ambientObject.start("profile");
+
+            reactiveObject.interrupt();
+            // console.log(reactiveObject.isPlaying);
+            reactiveObject.trigger("onboarding1");
+            // console.log("onboarding triggered", reactiveObject.isPlaying);
+        },
+        backDown: () => {
             ambientObject.stop();
             reactiveObject.interrupt();
-            reactiveObject.trigger("back", () => {
-                ambientObject.start("profile");
-            })
+            reactiveObject.trigger("back");
+        },
+        backUp: () => {
+            ambientObject.start("profile");
         },
         jogMoved: () => { },
         jogUp: () => { },
@@ -310,19 +319,19 @@ function toOnboardingStage2(isMissing) {
             buttonMap = {
                 recDown: () => { },
                 recUp: () => { },
-                playDown: () => { },
-                playUp: () => {
+                playDown: () => {
                     ambientObject.stop();
-                    reactiveObject.trigger("select", () => {
-                        toOnboardingStage3(isMissing);
-                    })
+                    reactiveObject.trigger("select");
                 },
-                backDown: () => { },
-                backUp: () => {
+                playUp: () => {
+                    toOnboardingStage3(isMissing);
+                },
+                backDown: () => {
                     ambientObject.stop();
-                    reactiveObject.trigger("back", () => {
-                        toOnboardingStage(isMissing);
-                    })
+                    reactiveObject.trigger("back");
+                },
+                backUp: () => {
+                    toOnboardingStage(isMissing);
                 },
                 jogMoved: () => { },
                 jogUp: () => { },
@@ -717,30 +726,48 @@ function setupButtons() {
 
     // adding animations on click
     ['mousedown', 'touchstart'].forEach(function (e) {
-        recButtonDiv.addEventListener(e, function () {
+        recButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             recordButton.classList.add('button-clicked');
             buttonMap.recDown();
         });
-        playButtonDiv.addEventListener(e, function () {
+        playButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             playButton.classList.add('button-clicked');
             buttonMap.playDown();
         });
-        stopButtonDiv.addEventListener(e, function () {
+        stopButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             stopButton.classList.add('button-clicked');
             buttonMap.backDown();
         });
     });
 
     ['mouseup', 'touchend'].forEach(function (e) {
-        recButtonDiv.addEventListener(e, function () {
+        recButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             recordButton.classList.remove('button-clicked');
             buttonMap.recUp();
         });
-        playButtonDiv.addEventListener(e, function () {
+        playButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             playButton.classList.remove('button-clicked');
             buttonMap.playUp();
         });
-        stopButtonDiv.addEventListener(e, function () {
+        stopButtonDiv.addEventListener(e, function (event) {
+            if (e === 'touchstart') {
+                event.preventDefault();
+            }
             stopButton.classList.remove('button-clicked');
             buttonMap.backUp();
         });
