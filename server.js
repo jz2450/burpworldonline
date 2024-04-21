@@ -61,8 +61,13 @@ httpsServer.listen(443, () => {
 
 // DB 
 //mongo
-const url = 'mongodb://localhost:27017/burpworldonline';
-mongoose.connect(url);
+const url = 'mongodb://127.0.0.1:27017/burpworldonline';
+try {
+  await mongoose.connect(url);
+} catch (error) {
+  console.error(error);
+}
+
 const Schema = mongoose.Schema;
 const userSchema = new Schema({
   userID: String,
