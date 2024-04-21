@@ -116,7 +116,6 @@ export class Reactive {
         return this._isPlaying;
     }
 
-
     async load(soundSheet) { // accepts a json with names as keys and urls as values
         for (let [cue, url] of Object.entries(soundSheet)) {
             // console.log(`Cue: ${cue}, url: ${url}`);
@@ -134,35 +133,37 @@ export class Reactive {
     }
 
     trigger(soundName, callback) { // callback = function to trigger on end
-        if (this._isPlaying) {
-            this.interrupt();
+        this.wasInterrupted = false;
+        if (this.source || this._isPlaying) {
+            this.source.stop();
+            this.source.disconnect();
         }
-        if (!this.source) {
-            this.wasInterrupted = false;
-            this.source = audioContext.createBufferSource();
-            this.source.buffer = this.bufferList[soundName];
-            this.source.connect(audioContext.destination);
-            this.source.onended = () => {
-                this._isPlaying = false;
-                this.source = null;
-                if (!this.wasInterrupted) {
-                    if (callback) {
-                        callback();
-                    }
+        this.source = null;
+        this.source = audioContext.createBufferSource();
+        this.source.buffer = this.bufferList[soundName];
+        this.source.connect(audioContext.destination);
+        this.source.onended = () => {
+            this._isPlaying = false;
+            this.source = null;
+            if (!this.wasInterrupted) {
+                if (callback) {
+                    callback();
                 }
-            };
-            this.source.start(0);
-            this._isPlaying = true;
-        }
+            }
+        };
+        this.source.start(0);
+        this._isPlaying = true;
     }
 
     interrupt() {
-        if (this.source) {
+        if (this.source || this._isPlaying) {
             this.source.stop();
+            this.source.disconnect();
             this.source = null;
         }
         this._isPlaying = false;
         this.wasInterrupted = true;
+        // console.log(this._isPlaying, this.source);
     }
 
 }
