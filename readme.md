@@ -4,7 +4,7 @@
 
 [burpworld.online](https://burpworld.online)
 
-Burp World Online is an online social space for burpers and burp connoisseurs alike.
+Burp World Online is an online social space for burpers and burp connoisseurs.
 
 This app is designed to be an exploration of non-visual user interfaces using sound to navigate, highlighting the rich sonic spectrum of the unjustly belittled belch.
 
@@ -68,3 +68,4 @@ Sound design, sonic branding, etc etc
 
 ### Further Reading
 "Designing Sound" by Andy Farnell
+Full write up available on my [blog](https://joshjoshjosh.notion.site/The-Thesis-Burp-World-Online-78d15c5a7433410aa86f26828636cea6?pvs=4) describing the full research and process
