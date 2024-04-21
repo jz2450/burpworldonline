@@ -100,6 +100,8 @@ infoButton.addEventListener('click', () => {
 let buttonMap;
 
 let jogwheelPrevVal;
+let jogPrevThres = 0.1;
+let jogNextThres = 0.9;
 
 
 // RECORDING SETUP
@@ -140,6 +142,7 @@ let reactiveSheet = {
     autoprev: "/cues/autoprev.mp3",
     back: "/cues/back.mp3",
     error: "/cues/error.mp3",
+    newunseen: "/cues/newunseen.mp3",
     nextcloser: "/cues/nextcloser.mp3",
     nextopener: "/cues/nextopener.mp3",
     prevcloser: "/cues/prevcloser.mp3",
@@ -149,6 +152,7 @@ let reactiveSheet = {
     sourceburp: "/cues/sourceburp.mp3",
     splash: "/cues/splash.mp3",
     success: "/cues/success.mp3",
+    threadlength: "/cues/threadlength.mp3",
     onboarding1: "/cues/onboarding1.mp3",
     onboarding2: "/cues/onboarding2.mp3",
     onboarding3: "/cues/onboarding3.mp3",
@@ -158,18 +162,12 @@ let reactiveSheet = {
 }
 
 // LOAD IN UI ELEMENTS
-let ambientLoaded = false;
-let reactiveLoaded = false;
 const ambientObject = new Ambient();
-ambientObject.load(ambientSheet).then(() => {
-    console.log("Ambient cues loaded: " + ambientObject);
-    ambientLoaded = true;
-})
+await ambientObject.load(ambientSheet);
+console.log("Ambient cues loaded: " + ambientObject);
 const reactiveObject = new Reactive();
-reactiveObject.load(reactiveSheet).then(() => {
-    console.log("Reactive cues loaded: " + reactiveObject);
-    reactiveLoaded = true;
-})
+await reactiveObject.load(reactiveSheet);
+console.log("Reactive cues loaded: " + reactiveObject);
 
 // CONTENT
 let currentThread;
@@ -206,6 +204,8 @@ if (auth.currentUser) {
 
 // STAGES
 async function toBootStage() {
+    console.log('to boot stage');
+    audioContext.resume(); // for chrome
     buttonMap = {
         recDown: () => { },
         recUp: () => { },
@@ -218,7 +218,6 @@ async function toBootStage() {
     };
     document.body.classList.add('authenticated');
     document.getElementById('main-card').classList.add('animateToLeft');
-    audioContext.resume(); // for chrome
     reactiveObject.trigger("splash", async () => {
         ambientObject.lowPass(true);
         ambientObject.start("loading");
@@ -456,8 +455,124 @@ async function toThreadStage() {
                     try {
                         console.log(currentThread);
                         await dbRespondToThread(burpuid, currentThread._id, uploadPath);
-                        reactiveObject.trigger("success");
-                        // take us back to current thread! not implemented yet
+                        reactiveObject.trigger("success", async () => {
+                            ambientObject.start('thread');
+                            ambientObject.lowPass(false);
+                            currentThread = await dbGetOneThread(currentThread._id);
+                            reloadCurrentThread();
+                        });
+                    } catch (error) {
+                        reactiveObject.trigger("error");
+                        console.log("error responding to thread", error);
+                    }
+                });
+            });
+        },
+        recUp: () => {
+            if (isRecording) {
+                stopRecording();
+            } else if (reactiveObject.isPlaying) {
+                console.log("recording cancelled");
+                reactiveObject.interrupt();
+                ambientObject.start('thread');
+            }
+        },
+        playDown: () => { reactiveObject.trigger('select'); },
+        playUp: () => {
+            // reactiveObject.trigger('select');
+            if (contentObject && !contentObject.isPlaying) {
+                ambientObject.lowPass(true);
+                contentObject.play(() => {
+                    ambientObject.lowPass(false);
+                });
+            } else if (contentObject && contentObject.isPlaying) {
+                contentObject.pause();
+                contentObject.reset();
+                toProfileStage(currentThread.threadAuthor);
+            }
+        },
+        backDown: () => {
+            reactiveObject.trigger('back');
+        },
+        backUp: () => {
+            if (contentObject.isPlaying) {
+                contentObject.pause();
+                ambientObject.lowPass(false);
+            } else {
+                currentThread = null;
+                toIdleStage();
+            }
+        },
+        jogMoved: () => {
+            // jogwheel value is 0 - 1.0
+            if (jogwheel.value < jogNextThres && jogwheel.value > jogPrevThres) {
+                if (contentObject.isPlaying) {
+                    contentObject.scrub(jogwheel.value);
+                }
+            } else if (jogwheel.value >= jogNextThres && jogwheelPrevVal < jogNextThres) {
+                reactiveObject.trigger('nextopener');
+            } else if (jogwheel.value <= jogPrevThres && jogwheelPrevVal > jogPrevThres) {
+                reactiveObject.trigger('prevopener');
+            }
+            jogwheelPrevVal = jogwheel.value;
+        },
+        jogUp: () => {
+            if (jogwheelPrevVal < jogNextThres && jogwheelPrevVal > jogPrevThres) {
+                if (contentObject.isPlaying) {
+                    contentObject.scrub(jogwheel.value);
+                }
+            } else if (jogwheelPrevVal >= jogNextThres) {
+                reactiveObject.trigger('nextcloser');
+                loadNextThread();
+            } else if (jogwheelPrevVal <= jogPrevThres) {
+                reactiveObject.trigger('prevcloser');
+                loadPreviousThread();
+            }
+            jogwheelPrevVal = jogwheel.value;
+        },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("thread");
+
+}
+
+async function toProfileStage(uid) {
+    console.log("to profile stage");
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("loading");
+    await loadProfile(uid);
+    reactiveObject.trigger('success');
+    console.log("in the profile stage");
+    buttonMap = {
+        recDown: () => {
+            ambientObject.stop();
+            reactiveObject.interrupt();
+            contentObject.pause();
+            console.log("recording now"); reactiveObject.trigger("recordstart", () => {
+                startRecording(async () => {
+                    // upload audio to server
+                    let uploadPath = await uploadBlob(pendingBlob);
+                    try {
+                        console.log(currentThread);
+                        await dbRespondToThread(burpuid, currentThread._id, uploadPath);
+                        reactiveObject.trigger("success", async () => {
+                            ambientObject.start('thread');
+                            ambientObject.lowPass(false);
+                            currentThread = await dbGetOneThread(currentThread._id);
+                            reloadCurrentThread();
+                        });
                     } catch (error) {
                         reactiveObject.trigger("error");
                         console.log("error responding to thread", error);
@@ -472,14 +587,17 @@ async function toThreadStage() {
                 console.log("recording cancelled");
                 reactiveObject.interrupt();
                 ambientObject.start('profile');
-                contentObject.play();
+                // contentObject.play();
             }
         },
         playDown: () => { reactiveObject.trigger('select'); },
         playUp: () => {
             // reactiveObject.trigger('select');
             if (contentObject && !contentObject.isPlaying) {
-                contentObject.play();
+                ambientObject.lowPass(true);
+                contentObject.play(() => {
+                    ambientObject.lowPass(false);
+                });
             }
         },
         backDown: () => {
@@ -488,33 +606,34 @@ async function toThreadStage() {
         backUp: () => {
             if (contentObject.isPlaying) {
                 contentObject.pause();
+                ambientObject.lowPass(false);
             } else {
                 currentThread = null;
-                toIdleStage();
+                toThreadStage();
             }
         },
         jogMoved: () => {
             // jogwheel value is 0 - 1.0
-            if (jogwheel.value < 0.75 && jogwheel.value > 0.25) {
+            if (jogwheel.value < jogNextThres && jogwheel.value > jogPrevThres) {
                 if (contentObject.isPlaying) {
                     contentObject.scrub(jogwheel.value);
                 }
-            } else if (jogwheel.value >= 0.75 && jogwheelPrevVal < 0.75) {
+            } else if (jogwheel.value >= jogNextThres && jogwheelPrevVal < jogNextThres) {
                 reactiveObject.trigger('nextopener');
-            } else if (jogwheel.value <= 0.25 && jogwheelPrevVal > 0.25) {
+            } else if (jogwheel.value <= jogPrevThres && jogwheelPrevVal > jogPrevThres) {
                 reactiveObject.trigger('prevopener');
             }
             jogwheelPrevVal = jogwheel.value;
         },
         jogUp: () => {
-            if (jogwheelPrevVal < 0.75 && jogwheelPrevVal > 0.25) {
+            if (jogwheelPrevVal < jogNextThres && jogwheelPrevVal > jogPrevThres) {
                 if (contentObject.isPlaying) {
                     contentObject.scrub(jogwheel.value);
                 }
-            } else if (jogwheelPrevVal >= 0.75) {
+            } else if (jogwheelPrevVal >= jogNextThres) {
                 reactiveObject.trigger('nextcloser');
                 loadNextThread();
-            } else if (jogwheelPrevVal <= 0.25) {
+            } else if (jogwheelPrevVal <= jogPrevThres) {
                 reactiveObject.trigger('prevcloser');
                 loadPreviousThread();
             }
@@ -523,24 +642,7 @@ async function toThreadStage() {
     };
     ambientObject.stop();
     ambientObject.lowPass(true);
-    ambientObject.start("thread");
-
-}
-
-function toProfileStage() {
-    buttonMap = {
-        recDown: () => { },
-        recUp: () => { },
-        playDown: () => { },
-        playUp: () => { },
-        backDown: () => { },
-        backUp: () => { },
-        jogMoved: () => { },
-        jogUp: () => { },
-    };
-    ambientObject.stop();
-    ambientObject.lowPass(true);
-    ambientObject.start("loading");
+    ambientObject.start("profile");
 }
 
 // <----------------------------------------------
@@ -601,9 +703,9 @@ function fbSignOut() {
     auth.signOut().then(() => {
         console.log('User signed out.');
         location.reload();
-      }).catch((error) => {
+    }).catch((error) => {
         console.error('Sign Out Error', error);
-      });
+    });
 }
 
 // INTERFACE BUTTON HELPERS
@@ -662,33 +764,70 @@ function setupButtons() {
 
 // CONTENT HELPERS
 
-async function loadFeed(callback) { // gets all unseen threads and preps the first one for playback
+async function loadProfile(uid) {
+    try {
+        console.log('loading profile for ', uid);
+        let userProfile = await dbGetUserProfile(uid);
+        let pseudoThread = {
+            posts: [
+                {
+                    storagePath: userProfile.userTagPath
+                }
+            ]
+        }
+        threadQueue = await dbGetUserThreads(uid);
+        threadQueue.unshift(pseudoThread);
+        if (threadQueue.length > 1) {
+            console.log('threads to be loaded: ', threadQueue);
+            threadHistory = [];
+            currentThread = null;
+            await loadNextThread();
+        } else {
+            console.log('no threads authored by this user');
+        }
+    } catch (error) {
+        console.log('Error loading profile', error);
+    }
+}
+
+async function loadFeed() { // gets all unseen threads and preps the first one for playback
     try {
         threadHistory = [];
         currentThread = null;
         threadQueue = await dbGetUnseenThreads(burpuid); // returns an array of threads into global variable
         if (!threadQueue || threadQueue.length < 1) {
             console.log("no new threads");
-            loadSeenFeed();
         } else {
-            console.log("threads to be loaded:", threadQueue);
-            await loadNextThread();
+            console.log("new threads to be loaded:", threadQueue);
+            threadQueue.forEach((thread, index) => {
+                setTimeout(() => {
+                    reactiveObject.trigger('newunseen');
+                }, 500*index);
+            })
+            // loadNextThread();
         }
+        loadSeenFeed();
     } catch (error) {
-        console.error('Error loading audio:', error);
+        console.error('Error loading feed:', error);
     }
 }
 
 async function loadSeenFeed() {
     console.log('loading seen threads, since you know every fucking thing');
     try {
-        threadHistory = [];
-        currentThread = null;
-        threadQueue = await dbGetSeenThreads(burpuid); // returns an array of threads into global variable
-        if (!threadQueue || threadQueue.length < 1) {
+        // threadHistory = [];
+        // currentThread = null;
+        let seenThreadQueue = await dbGetSeenThreads(burpuid); // returns an array of threads into global variable
+
+        if (!seenThreadQueue || seenThreadQueue.length < 1) {
             console.log("no seen threads");
+            
         } else {
-            console.log("threads to be loaded:", threadQueue);
+            console.log("threads to be loaded:", seenThreadQueue);
+            if (!threadQueue || threadQueue.length < 1) threadQueue = [];
+            seenThreadQueue.forEach((thread) => {
+                threadQueue.push(thread);
+            });
             await loadNextThread();
         }
     } catch (error) {
@@ -707,6 +846,29 @@ async function logThreadView(thread) {
     }
 }
 
+async function reloadCurrentThread() {
+    try {
+        if (!currentThread) {
+            console.log('no current thread');
+            reactiveObject.trigger('error');
+            return null;
+        } else {
+            let posts = currentThread.posts;
+            let storagePaths = posts.map(post => post.storagePath);
+            let urls = await getUrlsFromPaths(storagePaths);
+            contentObject.reset();
+            await contentObject.loadContentFromUrls(urls);
+            ambientObject.lowPass(true);
+            contentObject.play(() => {
+                ambientObject.lowPass(false);
+            });
+            logThreadView(currentThread);
+        }
+    } catch (error) {
+        console.log('error reloading current thread', error);
+    }
+}
+
 async function loadNextThread() {
     try {
         if (!threadQueue || threadQueue.length < 1) {
@@ -716,16 +878,19 @@ async function loadNextThread() {
         } else {
             if (currentThread) threadHistory.push(currentThread);
             currentThread = threadQueue.shift();
-            console.log("current thread: ", currentThread);
-            console.log("thread queue: ", threadQueue);
-            console.log("thread history: ", threadHistory);
+            // console.log("current thread: ", currentThread);
+            // console.log("thread queue: ", threadQueue);
+            // console.log("thread history: ", threadHistory);
             let posts = currentThread.posts;
             let storagePaths = posts.map(post => post.storagePath);
-            console.log(storagePaths);
+            // console.log(storagePaths);
             let urls = await getUrlsFromPaths(storagePaths);
             contentObject.reset();
             await contentObject.loadContentFromUrls(urls);
-            contentObject.play();
+            ambientObject.lowPass(true);
+            contentObject.play(() => {
+                ambientObject.lowPass(false);
+            });
             logThreadView(currentThread);
         }
     } catch (error) {
@@ -751,7 +916,10 @@ async function loadPreviousThread() {
             let urls = await getUrlsFromPaths(storagePaths);
             contentObject.reset();
             await contentObject.loadContentFromUrls(urls);
-            contentObject.play();
+            ambientObject.lowPass(true);
+            contentObject.play(() => {
+                ambientObject.lowPass(false);
+            });
             logThreadView(currentThread);
         }
     } catch (error) {
@@ -1021,6 +1189,37 @@ async function dbGetSeenThreads(uid) { // Returns array
     }
 }
 
+async function dbGetOneThread(threadid) {
+    try {
+        const response = await fetch('/thread/?' + new URLSearchParams({
+            type: "single-thread",
+            threadID: threadid,
+        }));
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.statusText}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            data = await response.text();
+        }
+
+        if (typeof data === 'string') {
+            console.error('Failed to parse JSON, received string: ', data);
+        } else {
+            console.log('Success:', data);
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error:', error);
+        return null;
+    }
+}
+
 async function dbGetUserThreads(uid) {
     try {
         const response = await fetch('/user/?' + new URLSearchParams({
@@ -1070,7 +1269,7 @@ async function dbGetUserProfile(uid) { // if no profile, will return "no profile
             data = await response.text();
         }
 
-        console.log(data);
+        console.log('got user profile ',data);
         return data;
     } catch (error) {
         console.error('Error:', error);
@@ -1105,7 +1304,7 @@ async function dbLogSeen(uid, threadId) {
             data = await response.text();
         }
 
-        console.log('Success:', data);
+        console.log('Successfully logged as seen:', data);
         return data;
     } catch (error) {
         console.error('Error:', error);

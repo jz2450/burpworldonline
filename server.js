@@ -125,6 +125,7 @@ app.get("/thread", async (req, res) => {
       // Find threads that the user has not seen
       const threadDocs = await threadModel.aggregate([
         { $match: { _id: { $nin: seenList } } },
+        { $sort: { dateCreated: -1 } }
       ]);
       console.log(threadDocs);
       if (threadDocs.length < 1) {
@@ -145,12 +146,24 @@ app.get("/thread", async (req, res) => {
       // Find threads that the user has not seen
       const threadDocs = await threadModel.aggregate([
         { $match: { _id: { $in: seenList } } },
+        { $sort: { dateCreated: -1 } }
       ]);
       console.log(threadDocs);
       if (threadDocs.length < 1) {
         res.status(404).send("No seen threads");
       } else {
         res.status(200).send(threadDocs);
+      }
+    } else if (req.query.type == "single-thread") {
+      const threadToReturn = new mongoose.Types.ObjectId(req.query.threadID);
+      const threadDoc = await threadModel.findOne({
+        _id: threadToReturn
+      });
+      console.log(threadDoc);
+      if (!threadDoc) {
+        res.status(404).send("No seen threads");
+      } else {
+        res.status(200).send(threadDoc);
       }
     }
   } catch (error) {
@@ -167,7 +180,7 @@ app.get("/user", async (req, res) => {
       // TO ADD: profile tags play first
       const threadDocs = await threadModel.find({
         threadAuthor: req.query.userID
-      });
+      }).sort({dateCreated: -1});
       console.log(threadDocs);
       if (threadDocs.length < 1) {
         res.status(404).send("No threads from this user");

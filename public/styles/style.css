@@ -97,6 +97,7 @@ p {
 #button-label-area {
   position: absolute;
   right: 0;
+  width: 15px;
   /* background-color: #D90D0D; */
   margin-top: 55px;
   margin-right: 15px;

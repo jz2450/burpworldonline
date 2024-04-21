@@ -91,10 +91,13 @@ export class Ambient {
     }
 
     lowPass(on) {
+        const now = audioContext.currentTime;
+        this.filter.frequency.cancelScheduledValues(now);
+        this.filter.frequency.setValueAtTime(this.filter.frequency.value, now);
         if (on) {
-            this.filter.frequency.value = 300;
+            this.filter.frequency.linearRampToValueAtTime(200, now + 1);
         } else {
-            this.filter.frequency.value = 20000;
+            this.filter.frequency.linearRampToValueAtTime(10000, now + 1);
         }
     }
 }
@@ -223,7 +226,9 @@ export class Content {
     }
 
     pause() {
-        this.source.stop();
+        if (this._isPlaying) {
+            this.source.stop();
+        }
         this.startOffset += (audioContext.currentTime - this.scrubStartTime) * this.playbackRate;
         this.source = null;
         this._isPlaying = false;

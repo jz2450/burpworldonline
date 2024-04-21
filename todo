@@ -1,22 +1,13 @@
 RIGHT NOW
-- arrange unseen(all threads?) from newest to oldest
-- no lowpass when paused??
-- profile stage
-    - clickable threads
-    - profiles should have all posts not just threads
+- deploy to digital ocean
+- create wiki
+    - make a flow map of the world
 
 BUGS
-- button labels keep shifting??
 - super slow mo bug???? AIRPODS
 - mouse up when not on button error
 
 NECESSITIES
-- what happens after a response is made to a thread? return to same thread, in same thread order
-- how do you refresh?
-- format errors from server endpoints
-- delete endpoint
-- create wiki
-
 
 WOULD BE NICE
 - written manual
@@ -30,6 +21,15 @@ WOULD BE NICE
 - transitions + crossfades
 - different ambient music for Seen thread, new vs old
 - cue to show how long a thread is
+- profiles should have all posts not just threads
+- My Profile page
+    - delete endpoint
+- opening sounds for each stage (walk on music)
+- save playback position from stage to stage
+- a atage for hearing new updates
+- how do you refresh? shake maybe?
+- format errors from server endpoints
+- sound to show thread post length
 
 COMPLETED
 - firebase check if someone is logged in already
@@ -56,6 +56,14 @@ COMPLETED
 - allow someone to switch users
 - handle mic rejection from user
 - check if phone number is valid before going to captcha
+- arrange unseen(all threads?) from newest to oldest
+- ramp lowpasses on ambient
+- no lowpass when paused??
+- profile stage
+    - clickable threads
+- what happens after a response is made to a thread? return to same thread but refresh, in same thread order
+- button labels keep shifting??
+- sound showing how many new threads to listen to threadlength
 
 ???
 - back press and hold back to home
