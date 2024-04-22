@@ -133,8 +133,8 @@ const mockpaths = [
 let ambientSheet = {
     idle: "/cues/idleloop.mp3",
     loading: "/cues/loadingloop.mp3",
-    profile: "/cues/profileloop.mp3",
-    thread: "/cues/threadloop.mp3",
+    profile: "/cues/profileloop2.mp3",
+    thread: "/cues/threadloop2.mp3",
 }
 // REACTIVE FILE NAMES
 let reactiveSheet = {
@@ -855,8 +855,8 @@ async function loadSeenFeed() {
             seenThreadQueue.forEach((thread) => {
                 threadQueue.push(thread);
             });
-            await loadNextThread();
         }
+        await loadNextThread();
     } catch (error) {
         console.error('Error loading audio:', error);
     }

@@ -1,5 +1,5 @@
 RIGHT NOW
-- deploy to digital ocean
+- TUTORIAL!
 - create wiki
     - make a flow map of the world
 - iphone mockup
@@ -10,6 +10,7 @@ BUGS
 - super slow mo bug???? AIRPODS
 - mouse up when not on button error
 - keyboard shifting UI on mobile
+- captcha is iffy, needs refresh
 
 NECESSITIES
 
@@ -35,6 +36,10 @@ WOULD BE NICE
 - format errors from server endpoints
 - sound to show thread post length
 - button when auto login that plays your profile tag
+- be able to turn volume all the way down
+- show that sound is happening!
+- different pause and back sounds
+- more varied stage sounds
 
 COMPLETED
 - firebase check if someone is logged in already
