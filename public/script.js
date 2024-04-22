@@ -4,6 +4,7 @@ import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 // FIREBASE
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 // SDKs for Firebase products that you want to use
@@ -18,11 +19,13 @@ const firebaseConfig = {
     projectId: "burp-world-online",
     storageBucket: "burp-world-online.appspot.com",
     messagingSenderId: "174854073314",
-    appId: "1:174854073314:web:84050fb07c1208e25627bb"
+    appId: "1:174854073314:web:84050fb07c1208e25627bb",
+    measurementId: "G-S4GX130WX3"
 };
 
 // Initialize Firebase
 const firebase = initializeApp(firebaseConfig);
+const analytics = getAnalytics(firebase);
 const storage = getStorage();
 const auth = getAuth();
 // auth
