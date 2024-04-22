@@ -242,11 +242,11 @@ async function toOnboardingStage(isMissing) {
         recDown: () => {
             ambientObject.stop();
             reactiveObject.interrupt();
-            console.log("recording now"); reactiveObject.trigger("recordstart");
-            startRecording(() => {
-                toOnboardingStage2(isMissing);
+            console.log("recording now"); reactiveObject.trigger("recordstart", () => {
+                startRecording(() => {
+                    toOnboardingStage2(isMissing);
+                });
             });
-
         },
         recUp: () => {
             // check if we're still in prerecord stage
