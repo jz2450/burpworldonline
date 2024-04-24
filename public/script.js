@@ -46,7 +46,7 @@ const loginButton = document.getElementById("login-button");
 const verifyButton = document.createElement('button');
 verifyButton.id = 'verify-button';
 verifyButton.className = 'login-buttons';
-verifyButton.textContent = 'Enter';
+verifyButton.textContent = 'Volume up, let\'s go';
 
 // ENTER KEY
 loginInput.addEventListener('keyup', function (event) {
@@ -75,6 +75,7 @@ let stopButton = document.getElementById('stopButton');
 let playButton = document.getElementById('playButton');
 let recordButton = document.getElementById('recButton');
 let infoButton = document.getElementById('info-button2');
+let tutorialToggle = document.getElementById('tutorial-check');
 
 // BUTTON EVENT LISTENERS
 // login button
@@ -97,6 +98,14 @@ infoButton.addEventListener('click', () => {
         }
     }
 
+});
+
+// tutorial toggle
+tutorialToggle.addEventListener('change', () => {
+    if (tutorialToggle.checked) {
+    } else {
+        // nothing?? feels weird come back to this
+    }
 });
 
 // button map defines what each button does in each stage
@@ -164,6 +173,12 @@ let reactiveSheet = {
     onboarding6: "/cues/onboarding6.mp3",
 }
 
+let tutorialSheet = {
+    standby: "/cues/tutorial/standby.mp3",
+    thread: "/cues/tutorial/thread.mp3",
+    profile: "/cues/tutorial/profile.mp3"
+}
+
 // LOAD IN UI ELEMENTS
 const ambientObject = new Ambient();
 await ambientObject.load(ambientSheet);
@@ -171,6 +186,9 @@ console.log("Ambient cues loaded: " + ambientObject);
 const reactiveObject = new Reactive();
 await reactiveObject.load(reactiveSheet);
 console.log("Reactive cues loaded: " + reactiveObject);
+const tutorialObject = new Reactive();
+await tutorialObject.load(tutorialSheet);
+console.log("Tutorial cues loaded");
 
 // CONTENT
 let currentThread;
@@ -229,11 +247,12 @@ async function toBootStage() {
             if (profile.missing) {
                 toOnboardingStage(profile.missing);
             } else {
-                toIdleStage();
+                if (tutorialToggle.checked) toTutIdleStage();
+                else toIdleStage();
             }
             // check if user has a profile setup
         } catch (error) {
-            console.error("error getting profile ",error);
+            console.error("error getting profile ", error);
         }
     });
 }
@@ -368,7 +387,8 @@ function toOnboardingStage3(isMissing) {
                 ambientObject.lowPass(true);
                 ambientObject.start("profile");
                 reactiveObject.trigger("onboarding6", () => {
-                    toIdleStage();
+                    if (tutorialToggle.checked) toTutIdleStage();
+                    else toIdleStage();
                 });
             } catch (error) {
                 console.log("error creating profile", error);
@@ -380,7 +400,8 @@ function toOnboardingStage3(isMissing) {
                 ambientObject.lowPass(true);
                 ambientObject.start("profile");
                 reactiveObject.trigger("onboarding6", () => {
-                    toIdleStage();
+                    if (tutorialToggle.checked) toTutIdleStage();
+                    else toIdleStage();
                 });
             } catch (error) {
                 console.log("error updating profile", error);
@@ -404,7 +425,8 @@ async function toIdleStage() {
                     try {
                         await dbCreateThread(burpuid, uploadPath);
                         reactiveObject.trigger("success", () => {
-                            toIdleStage();
+                            if (tutorialToggle.checked) toTutIdleStage();
+                            else toIdleStage();
                         });
                     } catch (error) {
                         reactiveObject.trigger("error");
@@ -426,7 +448,8 @@ async function toIdleStage() {
             reactiveObject.trigger('select');
         },
         playUp: () => {
-            toThreadStage();
+            if (tutorialToggle.checked) toTutThreadStage();
+            else toThreadStage();
         }, // to thread stage
         backDown: () => { },
         backUp: () => { },
@@ -436,6 +459,25 @@ async function toIdleStage() {
     ambientObject.stop();
     ambientObject.lowPass(true);
     ambientObject.start("idle");
+}
+
+function toTutIdleStage() {
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("idle");
+    tutorialObject.trigger('standby', () => {
+        toIdleStage();
+    });
 }
 
 async function toThreadStage() {
@@ -500,7 +542,9 @@ async function toThreadStage() {
             } else if (contentObject && contentObject.isPlaying) {
                 contentObject.pause();
                 contentObject.reset();
-                toProfileStage(currentThread.threadAuthor);
+                
+                if (tutorialToggle.checked) toTutProfileStage(currentThread.threadAuthor);
+                else toProfileStage(currentThread.threadAuthor);
             }
         },
         backDown: () => {
@@ -512,7 +556,11 @@ async function toThreadStage() {
                 ambientObject.lowPass(false);
             } else {
                 currentThread = null;
-                toIdleStage();
+                if (tutorialToggle.checked) {
+                    toTutIdleStage();
+                } else {
+                    toIdleStage();
+                }
             }
         },
         jogMoved: () => {
@@ -547,6 +595,25 @@ async function toThreadStage() {
     ambientObject.lowPass(true);
     ambientObject.start("thread");
 
+}
+
+function toTutThreadStage() {
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("thread");
+    tutorialObject.trigger('thread', () => {
+        toThreadStage();
+    })
 }
 
 async function toProfileStage(uid) {
@@ -621,7 +688,8 @@ async function toProfileStage(uid) {
                 ambientObject.lowPass(false);
             } else {
                 currentThread = null;
-                toThreadStage();
+                if (tutorialToggle.checked) toTutThreadStage();
+                else toThreadStage();
             }
         },
         jogMoved: () => {
@@ -655,6 +723,25 @@ async function toProfileStage(uid) {
     ambientObject.stop();
     ambientObject.lowPass(true);
     ambientObject.start("profile");
+}
+
+function toTutProfileStage(uid) {
+    buttonMap = {
+        recDown: () => { },
+        recUp: () => { },
+        playDown: () => { },
+        playUp: () => { },
+        backDown: () => { },
+        backUp: () => { },
+        jogMoved: () => { },
+        jogUp: () => { },
+    };
+    ambientObject.stop();
+    ambientObject.lowPass(true);
+    ambientObject.start("profile");
+    tutorialObject.trigger('profile', () => {
+        toProfileStage(uid);
+    });
 }
 
 // <----------------------------------------------
@@ -832,7 +919,7 @@ async function loadFeed() { // gets all unseen threads and preps the first one f
             threadQueue.forEach((thread, index) => {
                 setTimeout(() => {
                     reactiveObject.trigger('newunseen');
-                }, 500*index);
+                }, 500 * index);
             })
             // loadNextThread();
         }
@@ -851,7 +938,7 @@ async function loadSeenFeed() {
 
         if (!seenThreadQueue || seenThreadQueue.length < 1) {
             console.log("no seen threads");
-            
+
         } else {
             console.log("threads to be loaded:", seenThreadQueue);
             if (!threadQueue || threadQueue.length < 1) threadQueue = [];
@@ -1299,7 +1386,7 @@ async function dbGetUserProfile(uid) { // if no profile, will return "no profile
             data = await response.text();
         }
 
-        console.log('got user profile ',data);
+        console.log('got user profile ', data);
         return data;
     } catch (error) {
         console.error('Error:', error);

@@ -4,20 +4,27 @@
 }
 
 * {
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
+  -webkit-user-select: none;
+  /* Safari */
+  -ms-user-select: none;
+  /* IE 10 and IE 11 */
+  user-select: none;
+  /* Standard syntax */
   touch-action: none;
 }
 
 a {
-  -webkit-user-select: text; /* Safari */
-  -ms-user-select: text; /* IE 10 and IE 11 */
-  user-select: text; /* Standard syntax */
+  -webkit-user-select: text;
+  /* Safari */
+  -ms-user-select: text;
+  /* IE 10 and IE 11 */
+  user-select: text;
+  /* Standard syntax */
   touch-action: auto;
 }
 
-html, body {
+html,
+body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: var(--bg-color);
 
@@ -46,9 +53,12 @@ p {
 }
 
 .prevent-select {
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
+  -webkit-user-select: none;
+  /* Safari */
+  -ms-user-select: none;
+  /* IE 10 and IE 11 */
+  user-select: none;
+  /* Standard syntax */
 }
 
 #wrapper {
@@ -56,11 +66,12 @@ p {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh; /*this might be causing issues on mobile*/
+  height: 100vh;
+  /*this might be causing issues on mobile*/
 }
 
 #gradient {
-  position:absolute;
+  position: absolute;
   background: linear-gradient(to right, var(--bg-color) 85%, transparent);
   width: 340px;
   height: 100vh;
@@ -118,7 +129,7 @@ body.about #button-label-area {
   transition: opacity 0.5s, visibility 0.5s;
 }
 
-#button-label-area > div {
+#button-label-area>div {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
 }
@@ -126,14 +137,27 @@ body.about #button-label-area {
 #rec-label {
   margin-bottom: 55px;
 }
+
 #play-label {
   margin-bottom: 50px;
 }
+
 #back-label {
   margin-bottom: 75px;
 }
 
-#card-header, #card-header2{
+#scrub-label {
+  margin-bottom: 0px;
+}
+
+#tutorial-label {
+  writing-mode: vertical-lr;
+  rotate: 180deg;
+  transform: translate(50px, 65px);
+}
+
+#card-header,
+#card-header2 {
   margin: 20px 20px 10px;
   display: flex;
   justify-content: space-between;
@@ -158,25 +182,31 @@ body.about #version-number {
   transition: opacity 0.5s, visibility 0.5s;
 }
 
-#card-left, #card-left2 {
-  display:flex;
+#card-left,
+#card-left2 {
+  display: flex;
   flex-direction: column;
   border-right: 1px solid #333;
 }
 
-#bwotitle, #bwotitle2{
+#bwotitle,
+#bwotitle2 {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   margin: 10px 20px 0px 20px;
 }
 
-#info-button, #info-button2 {
+#info-button,
+#info-button2 {
   margin: 10px 0 0 0;
   cursor: pointer;
   text-align: center;
 }
 
-#info-button, #bwotitle, #logo, #card-left {
+#info-button,
+#bwotitle,
+#logo,
+#card-left {
   opacity: 0;
   visibility: hidden;
 }
@@ -280,13 +310,13 @@ body.authenticated .grecaptcha-badge {
 
 
 #container {
-    position: absolute;
-    transform: translateY(-15px);
-    /* align-self: center; */
-    /* flex-direction: row;
+  position: absolute;
+  transform: translateY(-15px);
+  /* align-self: center; */
+  /* flex-direction: row;
     justify-content: center;
     align-items: center; */
-    /* height: 100vh; */
+  /* height: 100vh; */
 }
 
 #UIbuttons {
@@ -347,18 +377,24 @@ button {
 } */
 
 
-input[type=range]{
-    pointer-events: none;
-  }
-  input[type=range]::-webkit-slider-thumb{/*Webkit Browsers like Chrome and Safari*/
-    pointer-events: auto;
-  }
-  input[type=range]::-moz-range-thumb{/*Firefox*/
-    pointer-events: auto;
-  }
-  input[type=range]::-ms-thumb{/*Internet Explorer*/
-    pointer-events: auto;
-  }
+input[type=range] {
+  pointer-events: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  /*Webkit Browsers like Chrome and Safari*/
+  pointer-events: auto;
+}
+
+input[type=range]::-moz-range-thumb {
+  /*Firefox*/
+  pointer-events: auto;
+}
+
+input[type=range]::-ms-thumb {
+  /*Internet Explorer*/
+  pointer-events: auto;
+}
 
 #jogwheel {
   -webkit-appearance: none;
@@ -374,7 +410,7 @@ input[type=range]{
   margin-bottom: 160px;
 }
 
- #jogwheel::-webkit-slider-thumb {
+#jogwheel::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   height: 30px;
