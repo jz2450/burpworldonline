@@ -925,11 +925,12 @@ async function loadFeed() { // gets all unseen threads and preps the first one f
             console.log("no new threads");
         } else {
             console.log("new threads to be loaded:", threadQueue);
-            threadQueue.forEach((thread, index) => {
-                setTimeout(() => {
-                    reactiveObject.trigger('newunseen');
-                }, 500 * index);
-            })
+            reactiveObject.trigger('newunseen');
+            // threadQueue.forEach((thread, index) => {
+            //     setTimeout(() => {
+            //         reactiveObject.trigger('newunseen');
+            //     }, 500 * index);
+            // })
             // loadNextThread();
         }
         loadSeenFeed();
