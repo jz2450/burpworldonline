@@ -468,7 +468,10 @@ function toTutIdleStage() {
         playDown: () => { },
         playUp: () => { },
         backDown: () => { },
-        backUp: () => { },
+        backUp: () => {
+            tutorialObject.interrupt();
+            toIdleStage();
+        },
         jogMoved: () => { },
         jogUp: () => { },
     };
@@ -604,7 +607,10 @@ function toTutThreadStage() {
         playDown: () => { },
         playUp: () => { },
         backDown: () => { },
-        backUp: () => { },
+        backUp: () => {
+            tutorialObject.interrupt();
+            toThreadStage();
+        },
         jogMoved: () => { },
         jogUp: () => { },
     };
@@ -732,7 +738,10 @@ function toTutProfileStage(uid) {
         playDown: () => { },
         playUp: () => { },
         backDown: () => { },
-        backUp: () => { },
+        backUp: () => {
+            tutorialObject.interrupt();
+            toProfileStage(uid);
+        },
         jogMoved: () => { },
         jogUp: () => { },
     };
