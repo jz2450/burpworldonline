@@ -245,6 +245,7 @@ async function toBootStage() {
         try {
             let profile = await dbGetUserProfile(burpuid);
             if (profile.missing) {
+                tutorialToggle.checked = true;
                 toOnboardingStage(profile.missing);
             } else {
                 if (tutorialToggle.checked) toTutIdleStage();
