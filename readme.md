@@ -46,12 +46,18 @@ The web client is built with HTML, CSS, JavaScript, and uses [Jogg.js](./public/
 
 All sounds used in the interface were designed in Ableton from one of my burps.
 
+💡 This repo includes:
+
+- The source code for Burp World Online
+- [Jogg.js](./public/joggjs.md), a Javascript library for creating sound-based front end user interfaces
+- The Ableton project file used to create the sounds
+
 ## Research and Context
 Burp World Online is a divergence from voice assistant-style audio interfaces. Rather than taking one-off queries it takes a more casual approach that allows for browsing. The interface takes direct influence from a handheld tape recorder because its microphone, button, and slider input allows for both basic and rich input. Originally designed to use repurposed hardware, the web client is restricted to these inputs to put the audio-only hypothesis to the test and to be portable to hardware in the future. 
 
-The interface also looks towards video game sound design (dynamically generated sound cues), Muzak (ambient mood altering music), and radio (surfing simultaneous audio streams) for inspiration. Using these influences a framework was created for dynamic sonic Stages (i.e the equivalent to a “view” in a graphic user interface) using Ambient, Reactive, and Content elements. More on this can be read in the Jogg.js documentation.
+The interface also looks towards video game sound design (dynamically generated sound cues), Muzak (ambient mood altering music), and radio (surfing simultaneous audio streams) for inspiration. Using these influences a framework was created for dynamic sonic Stages (i.e the equivalent to a “view” in a graphic user interface) using Ambient, Reactive, and Content elements. More on this can be read in the [Jogg.js documentation](./public/joggjs.md).
 
-Burp World Online uses custom sounds inspired by notable ambient composer Brian Eno. Each sound cue is carefully composed to be intuitively recognisable as an audio analog to a visual icon that represents a function. More on this can be read in the full documentation.
+Burp World Online uses custom sounds inspired by notable ambient composer Brian Eno. Each sound cue is carefully composed to be intuitively recognisable as an audio analog to a visual icon that represents a function. More on this can be read in the [full documentation](https://joshjoshjosh.notion.site/The-Thesis-Burp-World-Online-78d15c5a7433410aa86f26828636cea6?pvs=4).
 
 As a social media platform, Burp World Online operates similarly to the For You Page on TikTok or the Reels page on Instagram using a single algorithmically sorted feed to show new content. Despite it being a single linear feed, users don’t find it limiting with some using it as their main source of content. As a repository for short-form audio content it is related to voice apps such as AirChat, Clubhouse, and Cappuccino.
 
