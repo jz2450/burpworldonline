@@ -1,8 +1,5 @@
 RIGHT NOW
 - create wiki
-    - make a flow map of the world
-- iphone mockup
-- make presentation
 - finish writeup
 
 BUGS
