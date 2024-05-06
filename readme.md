@@ -40,7 +40,7 @@ Burp World Online allows you to:
 
 ## Technical Details
 
-Burp World Online runs on Node.js, Express, Firebase for authentication and storage, and MongoDB Community Edition. [burpworld.online](burpworld.online) is deployed on Digital Ocean and can be accessed using a web client with plans to create a hardware client in the future.
+Burp World Online is a full-stack web application that uses Node.js, Express, Firebase for authentication and storage, and MongoDB Community Edition. [burpworld.online](burpworld.online) is deployed on Digital Ocean and can be accessed using the web client with potential to work with native hardware clients in the future.
 
 The web client is built with HTML, CSS, JavaScript, and uses [Jogg.js](./public/joggjs.md), a custom-built Javascript abstraction layer built on top of the Web Audio API designed to create interactive audio interfaces. Jogg is designed to work with Ambient, Reactive, and Content objects to create Stages in the app. 
 
