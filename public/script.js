@@ -216,7 +216,7 @@ if (auth.currentUser) {
     console.log("no user logged in");
     loginPrompt.innerHTML = "";
     // loginInput.style.display = "block";
-    // loginMessage.style.display = "block";
+    loginMessage.style.display = "block";
     loginButton.style.display = "block";
 }
 
