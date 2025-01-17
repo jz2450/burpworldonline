@@ -6,7 +6,7 @@ import { audioContext, Content, Reactive, Ambient } from "./jogg.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, list, listAll } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
-import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
 // SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -49,25 +49,25 @@ verifyButton.className = 'login-buttons';
 verifyButton.textContent = 'Volume up, let\'s go';
 
 // ENTER KEY
-loginInput.addEventListener('keyup', function (event) {
-    if (event.key === 'Enter' || event.keyCode === 13) {
-        event.preventDefault();
-        loginButton.click();
-    }
-});
+// loginInput.addEventListener('keyup', function (event) {
+//     if (event.key === 'Enter' || event.keyCode === 13) {
+//         event.preventDefault();
+//         loginButton.click();
+//     }
+// });
 
-// + in the area code
-loginInput.addEventListener('input', addPlus);
+// // + in the area code
+// loginInput.addEventListener('input', addPlus);
 
-function addPlus(e) {
-    let target = e.target, position = target.selectionStart - 1;
-    // Remove non-digit characters
-    target.value = target.value.replace(/[^0-9]/g, '');
-    // Add '+' at the start
-    if (!target.value.startsWith('+')) {
-        target.value = '+' + target.value;
-    }
-}
+// function addPlus(e) {
+//     let target = e.target, position = target.selectionStart - 1;
+//     // Remove non-digit characters
+//     target.value = target.value.replace(/[^0-9]/g, '');
+//     // Add '+' at the start
+//     if (!target.value.startsWith('+')) {
+//         target.value = '+' + target.value;
+//     }
+// }
 
 // BUTTON SETUP
 let jogwheel = document.getElementById('jogwheel');
@@ -79,7 +79,8 @@ let tutorialToggle = document.getElementById('tutorial-check');
 
 // BUTTON EVENT LISTENERS
 // login button
-loginButton.addEventListener('click', submitPhoneNumber);
+// loginButton.addEventListener('click', submitPhoneNumber);
+loginButton.addEventListener('click', popupLogin);
 setupButtons();
 
 // about page
@@ -201,7 +202,7 @@ if (auth.currentUser) {
     burpuid = auth.currentUser.uid;
     console.log("User signed in successfully: " + burpuid);
     loginPrompt.innerHTML = "WELCOME BACK";
-    loginInput.style.display = "none";
+    // loginInput.style.display = "none";
     loginMessage.style.display = "block";
     loginMessage.innerHTML = `Wasn't you? <button id="signOutButton" style="cursor:pointer;background-color:rgb(192, 192, 192);color:rgba(0, 0, 0, 0.847);border-radius:3px;">Sign out</button><br><br>`;
     document.getElementById('signOutButton').addEventListener('click', fbSignOut);
@@ -213,9 +214,9 @@ if (auth.currentUser) {
     });
 } else {
     console.log("no user logged in");
-    loginPrompt.innerHTML = "ENTER YOUR PHONE NUMBER";
-    loginInput.style.display = "block";
-    loginMessage.style.display = "block";
+    loginPrompt.innerHTML = "";
+    // loginInput.style.display = "block";
+    // loginMessage.style.display = "block";
     loginButton.style.display = "block";
 }
 
@@ -546,7 +547,7 @@ async function toThreadStage() {
             } else if (contentObject && contentObject.isPlaying) {
                 contentObject.pause();
                 contentObject.reset();
-                
+
                 if (tutorialToggle.checked) toTutProfileStage(currentThread.threadAuthor);
                 else toProfileStage(currentThread.threadAuthor);
             }
@@ -789,6 +790,29 @@ function submitPhoneNumber() {
             window.recaptchaVerifier.render().then(function (widgetId) {
                 grecaptcha.reset(widgetId);
             });
+        });
+}
+
+function popupLogin() {
+    // Using a popup.
+    var provider = new GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+    signInWithPopup(auth, provider)
+        .then(function (result) {
+        // // This gives you a Google Access Token.
+        // var token = result.credential.accessToken;
+        // The signed-in user info.
+        var user = result.user;
+        console.log(user);
+        burpuid = user.uid;
+        console.log("User signed in successfully: " + burpuid);
+        audioContext.resume();
+        toBootStage();
+        })
+        .catch((error)=> {
+            console.log("Login failed: " + error);
+            document.getElementById("login-message").innerHTML = "Oops the login didn't work let's refresh and try again";
         });
 }
 
